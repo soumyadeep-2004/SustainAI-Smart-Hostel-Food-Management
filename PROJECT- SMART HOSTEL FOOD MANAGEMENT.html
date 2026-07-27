@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Hostel Food Management System — SustainAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<!-- Firebase SDK Compat -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#061d18; --bg-alt:#0C2723;
+    --paper:#F6F1E4; --paper-alt:#EFE6D2;
+    --ink:#172420; --ink-soft:#4B5B54; --ink-faint:#7C8B84;
+    --amber:#D98C3D; --amber-deep:#B96F27; --amber-pale:#F3DFB9;
+    --mint:#3FA796; --mint-deep:#2C7C6E; --mint-pale:#CFE9E2;
+    --danger:#C1543C;
+    --rule:rgba(23,36,32,0.12); --rule-dark:rgba(246,241,228,0.16);
+    --radius:14px; --shadow:0 12px 28px -14px rgba(12,39,35,0.35);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 480px at 14% -8%, rgba(63,167,150,0.18), transparent 60%),
+      radial-gradient(900px 420px at 100% 0%, rgba(217,140,61,0.12), transparent 55%),
+      var(--bg);
+    color:var(--paper);
+    font-family:'Space Grotesk', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms !important; transition-duration:.001ms !important;} }
+  a{color:inherit;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 28px;}
+  .hidden{display:none !important;}
+
+  /* ---------- loading ---------- */
+  #loading{min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;}
+  .spinner{width:34px; height:34px; border-radius:50%; border:3px solid var(--rule-dark); border-top-color:var(--amber); animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loading p{font-family:'IBM Plex Mono', monospace; font-size:12.5px; opacity:.65; letter-spacing:.06em;}
+
+  /* ---------- login ---------- */
+  #login{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px 20px;}
+  .login-card{background:var(--paper); color:var(--ink); border-radius:20px; box-shadow:var(--shadow); max-width:560px; width:100%; padding:38px 36px;}
+  .login-card .mark{width:42px; height:42px; border-radius:11px; background:linear-gradient(155deg, var(--mint), var(--mint-deep)); display:flex; align-items:center; justify-content:center; margin-bottom:18px;}
+  .login-card h1{font-family:'Fraunces', serif; font-size:26px; margin:0 0 6px;}
+  .login-card p.lead{color:var(--ink-soft); font-size:14px; margin:0 0 26px; line-height:1.5;}
+  .role-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:22px;}
+  @media (max-width:560px){ .role-grid{grid-template-columns:1fr;} }
+  .role-card{
+    border:1.6px solid var(--rule); border-radius:12px; padding:14px 12px; text-align:left; cursor:pointer;
+    background:transparent; font-family:'Space Grotesk', sans-serif;
+  }
+  .role-card b{display:block; font-family:'Fraunces', serif; font-size:15px; margin-bottom:4px; color:var(--ink);}
+  .role-card span{font-size:12px; color:var(--ink-soft); line-height:1.4;}
+  .role-card.selected{border-color:var(--mint); background:var(--mint-pale);}
+  .login-field{margin-bottom:16px;}
+  .login-field label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); margin-bottom:6px;}
+  .login-field input, .login-field select{
+    width:100%; font-family:'Space Grotesk', sans-serif; font-size:14.5px; padding:11px 13px;
+    border:1.4px solid var(--rule); border-radius:9px; background:#fff; color:var(--ink);
+  }
+  .login-field input:focus, .login-field select:focus{outline:2px solid var(--mint); outline-offset:1px;}
+  #login-error{color:var(--danger); font-size:12.5px; margin:-8px 0 14px; display:none;}
+
+  /* ---------- header ---------- */
+  header.site{padding:26px 0 0; border-bottom:1px solid var(--rule-dark);}
+  .brandrow{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand .mark{width:36px; height:36px; border-radius:10px; background:linear-gradient(155deg, var(--mint), var(--mint-deep)); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:var(--shadow);}
+  .brand .mark svg{width:19px; height:19px;}
+  .brand .name{font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.13em; text-transform:uppercase; color:var(--mint-pale); opacity:.85;}
+  .brand .sub{font-size:12px; color:var(--paper); opacity:.55;}
+  .who{display:flex; align-items:center; gap:12px;}
+  .who .badge{font-family:'IBM Plex Mono', monospace; font-size:11.5px; padding:6px 12px; border-radius:20px; background:rgba(246,241,228,0.08); border:1px solid var(--rule-dark);}
+  .who .badge b{color:var(--amber-pale);}
+  h1.title{font-family:'Fraunces', serif; font-weight:700; font-size:clamp(28px,4vw,42px); line-height:1.05; margin:22px 0 6px; letter-spacing:-.01em;}
+  p.deck{font-size:15.5px; color:var(--paper); opacity:.78; max-width:640px; line-height:1.55; margin:0 0 20px;}
+
+  nav.tabs{display:flex; gap:4px; margin-top:6px; border-bottom:1px solid var(--rule-dark); overflow-x:auto; -ms-overflow-style:none; scrollbar-width:none;}
+  nav.tabs::-webkit-scrollbar{display:none;}
+  nav.tabs button{font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:14px; background:none; border:none; cursor:pointer; color:var(--paper); opacity:.55; padding:12px 16px 14px; position:relative; white-space:nowrap;}
+  nav.tabs button:hover{opacity:.85;}
+  nav.tabs button:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  nav.tabs button.active{opacity:1; color:var(--amber-pale);}
+  nav.tabs button.active::after{content:""; position:absolute; left:14px; right:14px; bottom:-1px; height:2.5px; background:var(--amber); border-radius:2px 2px 0 0;}
+
+  main{padding:32px 0 90px;}
+  .view{display:none; animation:fadein .3s ease;}
+  .view.active{display:block;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  .eyebrow{font-family:'IBM Plex Mono', monospace; font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--mint-pale); opacity:.75; margin-bottom:8px; display:block;}
+  h2.section-title{font-family:'Fraunces', serif; font-weight:600; font-size:clamp(22px,3vw,30px); margin:0 0 6px; letter-spacing:-.01em;}
+  p.section-sub{color:var(--paper); opacity:.7; font-size:14.5px; max-width:620px; margin:0 0 22px; line-height:1.5;}
+
+  .row-between{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px;}
+
+  .card{background:var(--paper); color:var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); padding:22px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid2{display:grid; grid-template-columns:1.15fr .85fr; gap:16px;}
+  @media (max-width:860px){ .grid3{grid-template-columns:1fr;} .grid2{grid-template-columns:1fr;} }
+
+  .pillar{background:var(--paper); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:9px;}
+  .pillar .ico{width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--mint-pale); color:var(--mint-deep);}
+  .pillar h3{font-family:'Fraunces', serif; font-size:17px; margin:2px 0 0; color:var(--ink);}
+  .pillar p{font-size:13px; color:var(--ink-soft); line-height:1.5; margin:0;}
+
+  .stat-row{display:flex; gap:12px; flex-wrap:wrap; margin:20px 0 6px;}
+  .stat{flex:1 1 150px; background:rgba(246,241,228,0.06); border:1px solid var(--rule-dark); border-radius:12px; padding:15px 17px;}
+  .stat .n{font-family:'IBM Plex Mono', monospace; font-size:24px; font-weight:600; color:var(--amber-pale);}
+  .stat .l{font-size:11.5px; opacity:.65; margin-top:4px;}
+
+  /* day tabs */
+  .day-tabs{display:flex; gap:6px; overflow-x:auto; margin-bottom:20px; padding-bottom:4px; -ms-overflow-style:none; scrollbar-width:none;}
+  .day-tabs::-webkit-scrollbar{display:none;}
+  .day-chip{flex-shrink:0; font-family:'IBM Plex Mono', monospace; font-size:12px; padding:9px 16px; border-radius:24px; border:1px solid var(--rule-dark); background:rgba(246,241,228,0.05); color:var(--paper); cursor:pointer; transition:background .15s ease, color .15s ease, border-color .15s ease;}
+  .day-chip .d1{opacity:.6;}
+  .day-chip.active{background:#FFD93D; color:#172420; border-color:#FFD93D; font-weight:600;}
+  .day-chip.weekend:not(.active){color:var(--amber-pale);}
+
+  /* hostel selector */
+  .hostel-select{display:flex; align-items:center; gap:8px; font-size:13px;}
+  .hostel-select select{font-family:'IBM Plex Mono', monospace; font-size:13px; background:rgba(246,241,228,0.08); border:1px solid var(--rule-dark); color:var(--paper); border-radius:8px; padding:8px 11px;}
+
+  /* ticket */
+  .ticket{background:var(--paper); color:var(--ink); border-radius:4px; position:relative; box-shadow:var(--shadow); padding:18px 20px 30px;
+    background-image:
+      radial-gradient(circle at 0 14px, var(--bg) 6px, transparent 6.5px),
+      radial-gradient(circle at 100% 14px, var(--bg) 6px, transparent 6.5px);
+    background-repeat:no-repeat;
+    clip-path:polygon(0% 0%, 100% 0%, 100% 92%, 96% 100%, 92% 92%, 88% 100%, 84% 92%, 80% 100%, 76% 92%, 72% 100%, 68% 92%, 64% 100%, 60% 92%, 56% 100%, 52% 92%, 48% 100%, 44% 92%, 40% 100%, 36% 92%, 32% 100%, 28% 92%, 24% 100%, 20% 92%, 16% 100%, 12% 92%, 8% 100%, 4% 92%, 0% 100%);
+  }
+  .ticket-head{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px dashed var(--rule); padding-bottom:11px; margin-bottom:13px;}
+  .ticket-head .meal{font-family:'Fraunces', serif; font-weight:700; font-size:19px;}
+  .ticket-head .when{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft); margin-top:3px;}
+  .ticket-id{font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-align:right; color:var(--ink-faint);}
+  .ticket-rows{display:grid; grid-template-columns:1fr 1fr; gap:11px 18px; margin-bottom:13px;}
+  .ticket-rows .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:3px;}
+  .ticket-rows .v{font-family:'IBM Plex Mono', monospace; font-size:18px; font-weight:600;}
+  .ticket-rows .v.big{color:var(--amber-deep); font-size:22px;}
+  .tags{display:flex; gap:6px; flex-wrap:wrap; margin-top:2px; margin-bottom:12px;}
+  .tag{font-size:10.5px; font-family:'IBM Plex Mono', monospace; padding:3px 8px; border-radius:20px; background:var(--mint-pale); color:var(--mint-deep);}
+  .tag.warn{background:var(--amber-pale); color:var(--amber-deep);}
+  .tag.done{background:#DCEEE8; color:var(--mint-deep);}
+  .log-inline{border-top:1px dashed var(--rule); padding-top:12px; margin-top:2px;}
+  .log-inline .row{display:flex; gap:8px; align-items:end; flex-wrap:wrap;}
+  .log-inline .field{flex:1 1 90px;}
+  .log-inline label{display:block; font-size:10px; text-transform:uppercase; color:var(--ink-faint); margin-bottom:4px;}
+  .log-inline input{width:100%; font-family:'IBM Plex Mono', monospace; font-size:13px; padding:7px 9px; border:1px solid var(--rule); border-radius:7px; background:#fff; color:var(--ink);}
+
+  .btn{font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:13px; border-radius:9px; border:none; cursor:pointer; padding:10px 16px; background:var(--amber); color:#26160A; transition:transform .12s ease, background .15s ease;}
+  .btn:hover{background:var(--amber-deep); color:var(--paper);}
+  .btn:active{transform:scale(.97);}
+  .btn.ghost{background:transparent; border:1.4px solid var(--rule-dark); color:var(--paper);}
+  .btn.ghost:hover{background:rgba(246,241,228,0.08);}
+  .rsvp-item .btn.ghost{border:1.4px solid var(--rule); color:var(--ink);}
+  .rsvp-item .btn.ghost:hover{background:rgba(23,36,32,0.06);}
+  .btn.on{background:var(--mint); color:#062521;}
+  .btn.on:hover{background:var(--mint-deep); color:var(--paper);}
+  .btn.danger{background:transparent; border:1.4px solid rgba(193,84,60,.5); color:#E8A695;}
+  .btn.danger:hover{background:rgba(193,84,60,.15);}
+  .btn:focus-visible{outline:2px solid var(--amber-pale); outline-offset:2px;}
+  .btn.sm{padding:7px 12px; font-size:12px; border-radius:7px;}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+
+  .rsvp-item{background:var(--paper); color:var(--ink); border-radius:12px; padding:17px 19px; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:var(--shadow); margin-bottom:12px; flex-wrap:wrap;}
+  .rsvp-item .meta .meal{font-family:'Fraunces', serif; font-weight:700; font-size:18px;}
+  .rsvp-item .meta .when{font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+  .rsvp-item .count{font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--ink-soft); margin-top:6px;}
+  .rsvp-item .count b{color:var(--mint-deep); font-size:14.5px;}
+  .diet-chips{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;}
+  .chip{font-size:11px; padding:5px 10px; border-radius:20px; border:1px solid var(--rule); background:transparent; cursor:pointer; color:var(--ink-soft); font-family:'Space Grotesk', sans-serif;}
+  .chip.active{background:var(--mint); color:#062521; border-color:var(--mint);}
+  .chip.active.nv{background:var(--amber); border-color:var(--amber); color:#26160A;}
+
+  .ctx-panel{display:flex; gap:10px; flex-wrap:wrap; margin:16px 0 26px;}
+  .ctx-toggle{display:flex; align-items:center; gap:8px; background:rgba(246,241,228,0.06); border:1px solid var(--rule-dark); padding:9px 14px; border-radius:20px; cursor:pointer; font-size:12.5px; user-select:none;}
+  .ctx-toggle input{accent-color:var(--amber);}
+  .ctx-toggle.active{background:rgba(217,140,61,0.16); border-color:var(--amber);}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); padding:8px 9px; border-bottom:1px solid var(--rule);}
+  td{padding:9px 9px; border-bottom:1px solid var(--rule); font-family:'IBM Plex Mono', monospace; font-size:12.5px;}
+  tr:last-child td{border-bottom:none;}
+  .pct-bad{color:var(--danger); font-weight:600;}
+  .pct-good{color:var(--mint-deep); font-weight:600;}
+  .scroll-table{max-height:340px; overflow-y:auto;}
+
+  .settings-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media (max-width:640px){ .settings-grid{grid-template-columns:1fr;} }
+  .settings-grid .field label{display:block; font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); margin-bottom:6px;}
+  .settings-grid .field input{width:100%; font-family:'IBM Plex Mono', monospace; font-size:14px; padding:9px 11px; border:1px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);}
+
+  footer{padding:26px 0 60px; text-align:center; font-size:11.5px; color:var(--paper); opacity:.4; font-family:'IBM Plex Mono', monospace;}
+  .empty{padding:30px 16px; text-align:center; color:var(--ink-faint); font-size:13px;}
+
+  /* toasts */
+  #toasts{position:fixed; bottom:20px; right:20px; display:flex; flex-direction:column; gap:8px; z-index:50;}
+  .toast{background:var(--paper); color:var(--ink); font-family:'Space Grotesk', sans-serif; font-size:13px; font-weight:600; padding:11px 16px; border-radius:9px; box-shadow:var(--shadow); border-left:4px solid var(--mint); animation:toastin .25s ease;}
+  .toast.err{border-left-color:var(--danger);}
+  @keyframes toastin{from{opacity:0; transform:translateX(12px);} to{opacity:1; transform:translateX(0);}}
+
+  canvas{max-width:100%;}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p>LOADING SYSTEM STATE…</p></div>
+
+<div id="login" class="hidden">
+  <div class="login-card">
+    <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M3 12h18" stroke="#F6F1E4" stroke-width="2" stroke-linecap="round"/><path d="M12 21c-4.4 0-8-3.6-8-8h16c0 4.4-3.6 8-8 8z" fill="#F6F1E4" fill-opacity=".2" stroke="#F6F1E4" stroke-width="2" stroke-linejoin="round"/><path d="M12 12c0-3.5 1.5-6.5 4.5-8.5C13.5 5 12 8 12 12z" fill="#F6F1E4"/><path d="M12 12c0-3.5-1.5-6.5-4.5-8.5C10.5 5 12 8 12 12z" fill="#F6F1E4" fill-opacity=".65"/></svg></div>
+    <h1>Sign in to SustainAI</h1>
+    <p class="lead">Smart Hostel Food Management System — pick the role you want to explore. State persists, so RSVPs and logs you create are visible to every other role.</p>
+    <div class="role-grid" id="role-grid"></div>
+    <div class="login-field" id="login-name-field"><label id="login-name-label">Your name</label><input id="login-name" type="text" placeholder="e.g. Ananya Rao" maxlength="40"></div>
+    <div class="login-field hidden" id="login-password-field"><label>Admin Password</label><input id="login-password" type="password" placeholder="•••••"></div>
+    <div class="login-field hidden" id="login-hostel-field"><label>Hostel</label><select id="login-hostel"></select></div>
+    <div id="login-error">Pick a role and enter your name to continue.</div>
+    <button class="btn on" id="login-submit" style="width:100%;">Enter system</button>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+<header class="site">
+  <div class="wrap">
+    <div class="brandrow">
+      <div class="brand">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M3 12h18" stroke="#F6F1E4" stroke-width="2" stroke-linecap="round"/><path d="M12 21c-4.4 0-8-3.6-8-8h16c0 4.4-3.6 8-8 8z" fill="#F6F1E4" fill-opacity=".2" stroke="#F6F1E4" stroke-width="2" stroke-linejoin="round"/><path d="M12 12c0-3.5 1.5-6.5 4.5-8.5C13.5 5 12 8 12 12z" fill="#F6F1E4"/><path d="M12 12c0-3.5-1.5-6.5-4.5-8.5C10.5 5 12 8 12 12z" fill="#F6F1E4" fill-opacity=".65"/></svg></div>
+        <div><div class="name">SustainAI · Smart Hostel Food Management System</div><div class="sub">1M1B Green Skills &amp; Applied AI for Climate Action</div></div>
+      </div>
+      <div class="who">
+        <span class="badge" id="sync-badge" style="cursor:pointer; border:1px solid var(--rule-dark);">● Local Mode (Offline)</span>
+        <span class="badge" id="who-badge"></span>
+        <button class="btn ghost sm" id="switch-role">Switch role</button>
+      </div>
+    </div>
+    <h1 class="title">Smart Hostel Food<br>Management System</h1>
+    <p class="deck">Students confirm meals, the forecasting engine turns that signal into a prep quantity, and every service gets weighed against what was actually eaten — across a real weekly calendar and three campus hostels.</p>
+    <nav class="tabs" id="tabs"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="view" id="view-overview"></section>
+  <section class="view" id="view-main"></section>
+  <section class="view" id="view-billing"></section>
+</main>
+
+<footer>SustainAI · Smart Hostel Food Management System — data persists across sessions for this demo; all figures are simulated.</footer>
+</div>
+
+<div id="toasts"></div>
+
+<!-- Firebase Connection Console Modal -->
+<div id="firebase-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(12,39,35,0.85); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div class="login-card" style="max-width:500px; padding:30px; border-radius:14px; position:relative;">
+    <h2 style="font-family:'Fraunces', serif; margin:0 0 10px; color:var(--ink); font-size:22px;">Firebase Cloud Setup</h2>
+    <p style="font-size:13.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 18px;">Paste your Firebase Web App configuration JSON below to connect a live cloud database. If empty, the system will use your local browser storage.</p>
+    <div class="login-field" style="margin-bottom:14px;">
+      <label style="font-size:11px; color:var(--ink-faint);">Firebase Web Config JSON</label>
+      <textarea id="firebase-config-text" style="width:100%; height:140px; font-family:'IBM Plex Mono', monospace; font-size:11.5px; padding:10px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink); resize:none;" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "sustainai-...",
+  "projectId": "sustainai-...",
+  "storageBucket": "sustainai-...",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'></textarea>
+    </div>
+    <div id="firebase-setup-msg" style="font-size:12px; color:var(--mint-deep); margin-bottom:18px; line-height:1.4;">
+      💡 <b>Setup tip:</b> Ensure your Firestore Database is enabled in "Test Mode" so the client can read and write without auth rules.
+    </div>
+    <div style="display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--rule); padding-top:16px;">
+      <button class="btn ghost sm" id="firebase-modal-close" style="border-color:var(--rule); color:var(--ink);">Cancel</button>
+      <button class="btn danger sm" id="firebase-modal-disconnect" style="display:none;">Disconnect Cloud</button>
+      <button class="btn on sm" id="firebase-modal-save">Connect &amp; Sync</button>
+    </div>
+  </div>
+</div>
+
+<!-- Menu Edit Modal -->
+<div id="menu-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(12,39,35,0.85); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div class="login-card" style="max-width:450px; padding:30px; border-radius:14px; position:relative; background:var(--paper); color:var(--ink);">
+    <h2 style="font-family:'Fraunces', serif; margin:0 0 10px; color:var(--ink); font-size:22px;">✏️ Edit Mess Menu</h2>
+    <p style="font-size:13.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 18px;">Update the scheduled meal dish name and dietary options for this service.</p>
+    
+    <input type="hidden" id="edit-menu-meal-id">
+    
+    <div class="login-field" style="margin-bottom:14px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Date &amp; Meal Type</label>
+      <div id="edit-menu-meta" style="font-family:'IBM Plex Mono', monospace; font-size:13px; font-weight:600; color:var(--ink); padding:4px 0;">-</div>
+    </div>
+
+    <div class="login-field" style="margin-bottom:14px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Dish Name(s)</label>
+      <input id="edit-menu-dish" type="text" style="width:100%; font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);" placeholder="e.g. Paneer Butter Masala / Chicken Masala">
+      <small style="font-size:11px; color:var(--ink-soft); display:block; margin-top:4px;">Use a slash (<code>/</code>) to separate Veg and Non-veg options.</small>
+    </div>
+
+    <div class="login-field" style="margin-bottom:18px;">
+      <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; user-select:none; color:var(--ink);">
+        <input type="checkbox" id="edit-menu-has-nonveg" style="accent-color:var(--danger);"> Has Non-Vegetarian option
+      </label>
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--rule); padding-top:16px;">
+      <button class="btn ghost sm" id="menu-modal-close" style="border-color:var(--rule); color:var(--ink);">Cancel</button>
+      <button class="btn on sm" id="menu-modal-save">Save Menu Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Supplier Edit/Add Modal -->
+<div id="supplier-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(12,39,35,0.85); z-index:101; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div class="login-card" style="max-width:450px; padding:30px; border-radius:14px; position:relative; background:var(--paper); color:var(--ink);">
+    <h2 id="supplier-modal-title" style="font-family:'Fraunces', serif; margin:0 0 10px; color:var(--ink); font-size:22px;">➕ Add Supplier</h2>
+    <p style="font-size:13.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 18px;">Enter supplier partner profile details.</p>
+    
+    <input type="hidden" id="edit-supplier-index">
+    
+    <div class="login-field" style="margin-bottom:14px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Partner Name</label>
+      <input id="edit-supplier-name" type="text" style="width:100%; font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);" placeholder="e.g. Apex Dairy Co.">
+    </div>
+
+    <div class="login-field" style="margin-bottom:14px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Category</label>
+      <select id="edit-supplier-category" style="width:100%; font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);">
+        <option value="Grains & Pulses">Grains &amp; Pulses</option>
+        <option value="Dairy & Eggs">Dairy &amp; Eggs</option>
+        <option value="Vegetables & Fruits">Vegetables &amp; Fruits</option>
+        <option value="Non-Veg Supplies">Non-Veg Supplies</option>
+        <option value="Commercial LPG">Commercial LPG</option>
+        <option value="Others">Others</option>
+      </select>
+    </div>
+
+    <div class="login-field" style="margin-bottom:14px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Contact Representative</label>
+      <input id="edit-supplier-contact" type="text" style="width:100%; font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);" placeholder="e.g. Rajesh Nair (+91 99011 44552)">
+    </div>
+
+    <div class="login-field" style="margin-bottom:18px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Delivery Frequency</label>
+      <input id="edit-supplier-delivery" type="text" style="width:100%; font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);" placeholder="e.g. Daily (5:00 AM)">
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--rule); padding-top:16px;">
+      <button class="btn ghost sm" id="supplier-modal-close" style="border-color:var(--rule); color:var(--ink);">Cancel</button>
+      <button class="btn danger sm" id="supplier-modal-delete" style="display:none;">Delete</button>
+      <button class="btn on sm" id="supplier-modal-save">Save Supplier</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invoice Edit/Add Modal -->
+<div id="invoice-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(12,39,35,0.85); z-index:101; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div class="login-card" style="max-width:450px; padding:30px; border-radius:14px; position:relative; background:var(--paper); color:var(--ink);">
+    <h2 id="invoice-modal-title" style="font-family:'Fraunces', serif; margin:0 0 10px; color:var(--ink); font-size:22px;">➕ Add Invoice</h2>
+    <p style="font-size:13.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 18px;">Enter monthly commodity billing details.</p>
+    
+    <input type="hidden" id="edit-invoice-index">
+    
+    <div class="login-field" style="margin-bottom:14px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Month</label>
+      <input id="edit-invoice-month" type="text" style="width:100%; font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);" placeholder="e.g. July 2026">
+    </div>
+
+    <div class="login-field" style="margin-bottom:14px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Supplier</label>
+      <select id="edit-invoice-supplier" style="width:100%; font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);">
+        <!-- populated dynamically -->
+      </select>
+    </div>
+
+    <div class="login-field" style="margin-bottom:14px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Items Billed</label>
+      <input id="edit-invoice-items" type="text" style="width:100%; font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);" placeholder="e.g. Milk, Butter, Paneer">
+    </div>
+
+    <div class="login-field" style="margin-bottom:14px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Invoice Amount (₹)</label>
+      <input id="edit-invoice-amount" type="number" style="width:100%; font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);" placeholder="e.g. 45000">
+    </div>
+
+    <div class="login-field" style="margin-bottom:18px;">
+      <label style="font-size:11px; color:var(--ink-faint); display:block; margin-bottom:4px; text-transform:uppercase;">Status</label>
+      <select id="edit-invoice-status" style="width:100%; font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px; border:1.4px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink);">
+        <option value="Paid">Paid</option>
+        <option value="Pending Approval">Pending Approval</option>
+        <option value="Processing">Processing</option>
+      </select>
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--rule); padding-top:16px;">
+      <button class="btn ghost sm" id="invoice-modal-close" style="border-color:var(--rule); color:var(--ink);">Cancel</button>
+      <button class="btn danger sm" id="invoice-modal-delete" style="display:none;">Delete</button>
+      <button class="btn on sm" id="invoice-modal-save">Save Invoice</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('error', function(e) {
+  toast('JS Error: ' + e.message + ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')', true);
+});
+window.addEventListener('unhandledrejection', function(e) {
+  toast('Promise Error: ' + e.reason, true);
+});
+const _err = console.error;
+console.error = function(...args) {
+  _err.apply(console, args);
+  toast('Console Error: ' + args[0], true);
+};
+
+/* ============================================================
+   STORAGE HELPERS
+   ============================================================ */
+async function storeGet(key, shared){
+  try{
+    if (window.storage && typeof window.storage.get === 'function') {
+      const r = await window.storage.get(key, shared); 
+      return r ? JSON.parse(r.value) : null; 
+    }
+  } catch(e){}
+  const localVal = localStorage.getItem(key);
+  return localVal ? JSON.parse(localVal) : null;
+}
+
+async function storeSet(key, value, shared){
+  try{
+    if (window.storage && typeof window.storage.set === 'function') {
+      await window.storage.set(key, JSON.stringify(value), shared); 
+      return true; 
+    }
+  } catch(e){}
+  localStorage.setItem(key, JSON.stringify(value));
+  return true;
+}
+
+function toast(msg, isErr){
+  const el = document.createElement('div');
+  el.className = 'toast' + (isErr ? ' err' : '');
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(), 300); }, 2600);
+}
+
+/* ============================================================
+   CONSTANTS + SEEDING
+   ============================================================ */
+const MOCK_SUPPLIERS = [
+  { id: 'S1', name: 'Saraswati Grain Traders', category: 'Grains & Pulses', contact: 'M. K. Patel (+91 98450 11221)', delivery: 'Weekly (Mondays)' },
+  { id: 'S2', name: 'Apex Dairy Co.', category: 'Dairy & Eggs', contact: 'Rajesh Nair (+91 99011 44552)', delivery: 'Daily (5:00 AM)' },
+  { id: 'S3', name: 'Green Harvest Produce', category: 'Vegetables & Fruits', contact: 'Sanjay Dutt (+91 97322 88990)', delivery: 'Tri-weekly (Mon/Wed/Fri)' },
+  { id: 'S4', name: 'Safe Gas Distributors', category: 'Commercial LPG', contact: 'Vikram Mehta (+91 91223 33445)', delivery: 'Bi-monthly' },
+  { id: 'S5', name: 'Anupam Poultry & Meat', category: 'Non-Veg Supplies', contact: 'K. R. Rao (+91 96118 77665)', delivery: 'Bi-weekly (Thu/Sat)' }
+];
+
+const MOCK_INVOICES = [
+  { id: 'INV-2026-07-01', month: 'July 2026', supplier: 'Saraswati Grain Traders', items: 'Rice, Wheat Flour, Dal', amount: 58200, status: 'Paid' },
+  { id: 'INV-2026-07-02', month: 'July 2026', supplier: 'Apex Dairy Co.', items: 'Milk, Butter, Paneer, Curd', amount: 46500, status: 'Paid' },
+  { id: 'INV-2026-07-03', month: 'July 2026', supplier: 'Green Harvest Produce', items: 'Potatoes, Tomatoes, Vegetables', amount: 19800, status: 'Paid' },
+  { id: 'INV-2026-07-04', month: 'July 2026', supplier: 'Anupam Poultry & Meat', items: 'Eggs, Chicken, Fish', amount: 24100, status: 'Pending Approval' },
+  { id: 'INV-2026-06-01', month: 'June 2026', supplier: 'Saraswati Grain Traders', items: 'Grains and Spices Restock', amount: 62400, status: 'Paid' },
+  { id: 'INV-2026-06-02', month: 'June 2026', supplier: 'Apex Dairy Co.', items: 'Monthly Dairy Contract', amount: 44200, status: 'Paid' },
+  { id: 'INV-2026-06-03', month: 'June 2026', supplier: 'Safe Gas Distributors', items: '6 Commercial LPG Refills', amount: 13500, status: 'Paid' }
+];
+
+const MEAL_TIMES = { Breakfast:'7:30 AM', Lunch:'12:30 PM', Dinner:'8:00 PM' };
+const HISTORY = { Breakfast:0.51, Lunch:0.67, Dinner:0.77 }; // fraction of hostel residents, historically
+const HOSTELS = [
+  { id:'h14', name:'Hostel 14', residents:180 },
+  { id:'h12', name:'Hostel 12', residents:150 },
+  { id:'g03', name:'Girls Hostel 3', residents:210 },
+];
+
+const WEEKLY_MENU = {
+  0: { // Sunday
+    Breakfast: { dish: 'Aloo Paratha with Butter & Curd', hasNonveg: false },
+    Lunch: { dish: 'Special Veg Biryani & Salan', hasNonveg: false },
+    Dinner: { dish: 'Dal Makhani & Phulka / Paneer Butter Masala', hasNonveg: false }
+  },
+  1: { // Monday
+    Breakfast: { dish: 'Idli Sambar & Coconut Chutney', hasNonveg: false },
+    Lunch: { dish: 'Chole Bhature & Sweet Lassi', hasNonveg: false },
+    Dinner: { dish: 'Dal Makhani, Mix Veg Sabzi & Roti', hasNonveg: false }
+  },
+  2: { // Tuesday
+    Breakfast: { dish: 'Poha with Sev & Jalebi', hasNonveg: false },
+    Lunch: { dish: 'Rajma Chawal & Papad & Pickle', hasNonveg: false },
+    Dinner: { dish: 'Kadhi Pakora, Rice & Phulka', hasNonveg: false }
+  },
+  3: { // Wednesday
+    Breakfast: { dish: 'Uttapam & Tomato Chutney', hasNonveg: false },
+    Lunch: { dish: 'Dal Fry, Jeera Aloo & Roti', hasNonveg: false },
+    Dinner: { dish: 'Kadhai Paneer & Butter Naan', hasNonveg: false }
+  },
+  4: { // Thursday
+    Breakfast: { dish: 'Pav Bhaji & Sliced Lemon', hasNonveg: false },
+    Lunch: { dish: 'Aloo Gobi, Dal Tadka & Steam Rice', hasNonveg: false },
+    Dinner: { dish: 'Malai Kofta / Egg Curry & Phulka', hasNonveg: true }
+  },
+  5: { // Friday
+    Breakfast: { dish: 'Bread Omelette / Veg Cheese Sandwich', hasNonveg: true },
+    Lunch: { dish: 'Shahi Paneer, Dal Fry & Phulka', hasNonveg: false },
+    Dinner: { dish: 'Dal Makhani & Jeera Rice', hasNonveg: false }
+  },
+  6: { // Saturday
+    Breakfast: { dish: 'Puri Sabzi & Sweet Sooji Halwa', hasNonveg: false },
+    Lunch: { dish: 'Veg Pulao, Curd & Onion Salad', hasNonveg: false },
+    Dinner: { dish: 'Paneer Lababdar / Chicken Masala & Phulka', hasNonveg: true }
+  }
+};
+
+function dateLabel(offset){
+  const d = new Date(); d.setDate(d.getDate()+offset);
+  return { 
+    iso: d.toISOString().slice(0,10), 
+    short: d.toLocaleDateString('en-IN',{weekday:'short', day:'numeric', month:'short'}), 
+    isWeekend: [0,6].includes(d.getDay()),
+    dayOfWeek: d.getDay()
+  };
+}
+
+function seedMealsForHostel(hostel){
+  const days = [];
+  for(let i=0;i<7;i++){
+    const d = dateLabel(i);
+    const meals = {};
+    ['Breakfast','Lunch','Dinner'].forEach(type=>{
+      let base = Math.round(hostel.residents * HISTORY[type]);
+      if(d.isWeekend) base = Math.round(base*0.8);
+      const simulatedOthers = Math.max(6, Math.round(base*0.78) - Math.round(Math.random()*10));
+      const menu = WEEKLY_MENU[d.dayOfWeek][type];
+      const veg = menu.hasNonveg ? Math.round(simulatedOthers*0.64) : simulatedOthers;
+      meals[type] = {
+        id: `${hostel.id}-${d.iso}-${type[0]}`,
+        type, 
+        dish: menu.dish,
+        hasNonveg: menu.hasNonveg,
+        baseHistory: base, 
+        simulatedOthers,
+        dietVeg: veg, 
+        dietNonveg: menu.hasNonveg ? (simulatedOthers - veg) : 0,
+        rsvpBy: {}, 
+        acknowledged: false,
+      };
+    });
+    days.push({ date:d.iso, label:d.short, isWeekend:d.isWeekend, meals });
+  }
+  return days;
+}
+
+function seedState(){
+  const mealsByHostel = {};
+  HOSTELS.forEach(h=>{ mealsByHostel[h.id] = seedMealsForHostel(h); });
+
+  const wasteLog = [];
+  let seq = 1;
+  const auditLog = [];
+
+  const now = new Date();
+  const mealTypes = ['Breakfast', 'Lunch', 'Dinner'];
+  const staffNames = ['Ramesh Kumar', 'Sunita Sharma', 'Vikram Singh'];
+
+  // Let's generate realistic mock waste logs for the last 6 days
+  for (let offset = -6; offset <= -1; offset++) {
+    const d = new Date();
+    d.setDate(now.getDate() + offset);
+    const dateStr = d.toISOString().slice(0, 10);
+    const shortLabel = d.toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short'});
+    const isWeekend = [0, 6].includes(d.getDay());
+    
+    HOSTELS.forEach(h => {
+      mealTypes.forEach(type => {
+        if (Math.random() > 0.2) { // 80% data coverage
+          const menu = WEEKLY_MENU[d.getDay()][type];
+          let base = Math.round(h.residents * HISTORY[type]);
+          if (isWeekend) base = Math.round(base * 0.8);
+          
+          const predicted = Math.round(base * (0.88 + Math.random() * 0.24));
+          const prepared = Math.round(predicted * 1.08);
+          const consumed = Math.round(prepared * (0.76 + Math.random() * 0.2));
+          
+          wasteLog.push({
+            id: seq++,
+            mealId: `${h.id}-${dateStr}-${type[0]}`,
+            hostelId: h.id,
+            mealLabel: `${type} · ${shortLabel}`,
+            hostelName: h.name,
+            prepared,
+            consumed,
+            loggedBy: staffNames[seq % 3],
+            ts: d.getTime() - (12 - mealTypes.indexOf(type) * 4) * 3600000
+          });
+        }
+      });
+    });
+  }
+
+  auditLog.push({ ts: Date.now() - 86400000 * 3, actor: 'System', action: 'Baseline AI models calibrated for Hostel 14, 12, and Girls Hostel 3.' });
+  auditLog.push({ ts: Date.now() - 86400000 * 2, actor: 'System', action: 'Hostel 14 Smart IoT scales initialized.' });
+  auditLog.push({ ts: Date.now() - 86400000 * 1, actor: 'Ramesh Kumar (Kitchen Staff)', action: 'Logged Breakfast, Lunch, Dinner waste figures for yesterday.' });
+  auditLog.push({ ts: Date.now(), actor: 'System', action: 'Demo environment initialised with historical logs.' });
+
+  return {
+    hostels: HOSTELS,
+    mealsByHostel,
+    context: { exam:false, rain:false, holiday:false },
+    wasteLog,
+    auditLog,
+    settings: { costPerServing:22, gramsPerServing:350, baselineWastePct:22 },
+    wasteSeq: seq,
+    suppliers: JSON.parse(JSON.stringify(MOCK_SUPPLIERS)),
+    invoices: JSON.parse(JSON.stringify(MOCK_INVOICES))
+  };
+}
+
+/* ============================================================
+   GLOBAL RUNTIME STATE
+   ============================================================ */
+let state = null;   // shared, persisted
+let me = null;      // personal, persisted { role, name, studentId, hostelId }
+let activeDay = { student:0, kitchen:0 };
+let activeTab = 'overview';
+let wasteChart, hostelChart, billingChart;
+
+// Firebase state
+let fbApp = null;
+let db = null;
+let syncActive = false;
+let unsubscribers = [];
+
+async function persistState(){ 
+  await storeSet('foodsys:state', state, true); 
+}
+async function persistMe(){ await storeSet('foodsys:me', me, false); }
+
+function pushAudit(action){
+  const actor = me ? me.name+' ('+roleLabel()+')' : 'System';
+  const entry = { ts: Date.now(), actor, action };
+  if (syncActive && db) {
+    dbAddAuditLog(entry);
+  } else {
+    state.auditLog.unshift(entry);
+    if(state.auditLog.length>60) state.auditLog.length = 60;
+    persistState();
+  }
+}
+
+/* ============================================================
+   FIREBASE CLOUD INTEGRATION ENGINE
+   ============================================================ */
+function clearSync() {
+  unsubscribers.forEach(unsub => {
+    try { unsub(); } catch(e) {}
+  });
+  unsubscribers = [];
+  syncActive = false;
+}
+
+async function initFirebase() {
+  const configStr = localStorage.getItem('foodsys:firebaseConfig');
+  const badge = document.getElementById('sync-badge');
+  if (!configStr) {
+    db = null;
+    syncActive = false;
+    badge.innerHTML = '● Local Storage (Offline)';
+    badge.style.background = 'rgba(246,241,228,0.08)';
+    badge.style.color = 'var(--paper)';
+    badge.style.borderColor = 'var(--rule-dark)';
+    return false;
+  }
+
+  try {
+    const config = JSON.parse(configStr);
+    if (!firebase.apps.length) {
+      fbApp = firebase.initializeApp(config);
+    } else {
+      fbApp = firebase.app();
+    }
+    db = fbApp.firestore();
+    syncActive = true;
+    badge.innerHTML = '● Cloud Connected';
+    badge.style.background = 'rgba(63,167,150,0.15)';
+    badge.style.color = 'var(--mint)';
+    badge.style.borderColor = 'var(--mint)';
+    return true;
+  } catch (e) {
+    console.error('Firebase init failed', e);
+    db = null;
+    syncActive = false;
+    badge.innerHTML = '● Connection Error';
+    badge.style.background = 'rgba(193,84,60,0.15)';
+    badge.style.color = 'var(--danger)';
+    badge.style.borderColor = 'var(--danger)';
+    toast('Failed to connect to Firebase. Check config JSON.', true);
+    return false;
+  }
+}
+
+async function startSync() {
+  clearSync();
+  syncActive = true;
+  let loadedCount = 0;
+  
+  // Seed local fallback first just in case
+  const localState = await storeGet('foodsys:state', true);
+  state = localState || seedState();
+
+  function checkDone() {
+    loadedCount++;
+    if (loadedCount >= 5) {
+      sanitizeState();
+      document.getElementById('loading').classList.add('hidden');
+      if (me && me.role) {
+        showApp();
+      } else {
+        showLogin();
+      }
+    }
+  }
+
+  // 1. Settings Listener
+  const unsubSettings = db.collection('settings').doc('global').onSnapshot(async doc => {
+    if (!doc.exists) {
+      await db.collection('settings').doc('global').set(state.settings);
+    } else {
+      state.settings = doc.data();
+    }
+    if (loadedCount < 5) checkDone();
+    else { renderOverview(); if (activeTab === 'main') renderMain(); }
+  }, err => {
+    console.error('Settings sync error', err);
+    if (loadedCount < 5) checkDone();
+  });
+  unsubscribers.push(unsubSettings);
+
+  // 2. Context Listener
+  const unsubContext = db.collection('context').doc('global').onSnapshot(async doc => {
+    if (!doc.exists) {
+      await db.collection('context').doc('global').set(state.context);
+    } else {
+      state.context = doc.data();
+    }
+    if (loadedCount < 5) checkDone();
+    else { if (activeTab === 'main') renderMain(); }
+  }, err => {
+    console.error('Context sync error', err);
+    if (loadedCount < 5) checkDone();
+  });
+  unsubscribers.push(unsubContext);
+
+  // 3. Waste Log Listener
+  const unsubWaste = db.collection('wasteLog').orderBy('ts', 'asc').onSnapshot(async querySnapshot => {
+    const logs = [];
+    querySnapshot.forEach(doc => {
+      logs.push(doc.data());
+    });
+    state.wasteLog = logs;
+    state.wasteSeq = logs.reduce((m, l) => Math.max(m, l.id), 0) + 1;
+    if (loadedCount < 5) checkDone();
+    else { renderOverview(); if (activeTab === 'main') renderMain(); }
+  }, err => {
+    console.error('Waste sync error', err);
+    if (loadedCount < 5) checkDone();
+  });
+  unsubscribers.push(unsubWaste);
+
+  // 4. Audit Log Listener
+  const unsubAudit = db.collection('auditLog').orderBy('ts', 'desc').limit(60).onSnapshot(async querySnapshot => {
+    const audits = [];
+    querySnapshot.forEach(doc => {
+      audits.push(doc.data());
+    });
+    if (audits.length === 0 && state.auditLog.length > 0) {
+      for (const a of state.auditLog) {
+        await db.collection('auditLog').doc(String(a.ts)).set(a);
+      }
+    } else {
+      state.auditLog = audits;
+    }
+    if (loadedCount < 5) checkDone();
+    else { renderOverview(); if (activeTab === 'main') renderMain(); }
+  }, err => {
+    console.error('Audit sync error', err);
+    if (loadedCount < 5) checkDone();
+  });
+  unsubscribers.push(unsubAudit);
+
+  // 5. Meals Listener
+  const unsubMeals = db.collection('meals').onSnapshot(async querySnapshot => {
+    if (querySnapshot.empty) {
+      const batch = db.batch();
+      for (const hostelId of Object.keys(state.mealsByHostel)) {
+        const days = state.mealsByHostel[hostelId];
+        for (const day of days) {
+          for (const type of ['Breakfast', 'Lunch', 'Dinner']) {
+            const meal = day.meals[type];
+            const ref = db.collection('meals').doc(meal.id);
+            batch.set(ref, {
+              ...meal,
+              hostelId,
+              date: day.date,
+              label: day.label,
+              isWeekend: day.isWeekend
+            });
+          }
+        }
+      }
+      await batch.commit();
+    } else {
+      const tempMeals = {};
+      HOSTELS.forEach(h => {
+        tempMeals[h.id] = seedMealsForHostel(h); 
+      });
+
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const hostelId = data.hostelId;
+        const date = data.date;
+        const type = data.type;
+        if (tempMeals[hostelId]) {
+          const day = tempMeals[hostelId].find(d => d.date === date);
+          if (day && day.meals[type]) {
+            day.meals[type] = {
+              id: data.id,
+              type: data.type,
+              dish: data.dish || '',
+              hasNonveg: data.hasNonveg || false,
+              baseHistory: data.baseHistory,
+              simulatedOthers: data.simulatedOthers,
+              dietVeg: data.dietVeg,
+              dietNonveg: data.dietNonveg,
+              rsvpBy: data.rsvpBy || {},
+              acknowledged: data.acknowledged || false
+            };
+          }
+        }
+      });
+      state.mealsByHostel = tempMeals;
+    }
+    if (loadedCount < 5) checkDone();
+    else { renderOverview(); if (activeTab === 'main') renderMain(); }
+  }, err => {
+    console.error('Meals sync error', err);
+    if (loadedCount < 5) checkDone();
+  });
+  unsubscribers.push(unsubMeals);
+}
+
+async function dbSetSettings() {
+  if (syncActive && db) {
+    try {
+      await db.collection('settings').doc('global').set(state.settings);
+    } catch(e) {
+      console.error(e);
+      toast('Failed to save settings to cloud', true);
+    }
+  } else {
+    await persistState();
+  }
+}
+
+async function dbSetContext() {
+  if (syncActive && db) {
+    try {
+      await db.collection('context').doc('global').set(state.context);
+    } catch(e) {
+      console.error(e);
+      toast('Failed to save context to cloud', true);
+    }
+  } else {
+    await persistState();
+  }
+}
+
+async function dbSetMeal(meal) {
+  if (syncActive && db) {
+    try {
+      let hostelId = null;
+      let date = null;
+      for (const hId of Object.keys(state.mealsByHostel)) {
+        const days = state.mealsByHostel[hId];
+        const day = days.find(d => Object.values(d.meals).some(m => m.id === meal.id));
+        if (day) {
+          hostelId = hId;
+          date = day.date;
+          break;
+        }
+      }
+      if (hostelId && date) {
+        await db.collection('meals').doc(meal.id).set({
+          id: meal.id,
+          type: meal.type,
+          dish: meal.dish || '',
+          hasNonveg: meal.hasNonveg || false,
+          baseHistory: meal.baseHistory,
+          simulatedOthers: meal.simulatedOthers,
+          dietVeg: meal.dietVeg,
+          dietNonveg: meal.dietNonveg,
+          rsvpBy: meal.rsvpBy || {},
+          acknowledged: meal.acknowledged || false,
+          hostelId,
+          date
+        });
+      }
+    } catch(e) {
+      console.error(e);
+      toast('Failed to update RSVP in cloud', true);
+    }
+  } else {
+    await persistState();
+  }
+}
+
+async function dbAddWasteLog(entry) {
+  if (syncActive && db) {
+    try {
+      await db.collection('wasteLog').doc(String(entry.id)).set(entry);
+    } catch(e) {
+      console.error(e);
+      toast('Failed to log service to cloud', true);
+    }
+  } else {
+    await persistState();
+  }
+}
+
+async function dbAddAuditLog(entry) {
+  if (syncActive && db) {
+    try {
+      await db.collection('auditLog').doc(String(entry.ts)).set(entry);
+    } catch(e) {
+      console.error(e);
+    }
+  } else {
+    await persistState();
+  }
+}
+
+async function clearCollection(name) {
+  const snap = await db.collection(name).get();
+  const chunks = [];
+  let current = db.batch();
+  let count = 0;
+  for (const doc of snap.docs) {
+    current.delete(doc.ref);
+    count++;
+    if (count === 400) {
+      chunks.push(current);
+      current = db.batch();
+      count = 0;
+    }
+  }
+  if (count > 0) chunks.push(current);
+  for (const batch of chunks) {
+    await batch.commit();
+  }
+}
+
+async function dbResetDemo() {
+  if (syncActive && db) {
+    // Clean all collections in batches of 400 safely
+    await clearCollection('wasteLog');
+    await clearCollection('auditLog');
+    await clearCollection('meals');
+
+    const defaultState = seedState();
+    
+    // Save settings and context
+    const batch = db.batch();
+    batch.set(db.collection('settings').doc('global'), defaultState.settings);
+    batch.set(db.collection('context').doc('global'), defaultState.context);
+    await batch.commit();
+
+    // Re-seed meals, wasteLog and auditLog in batches of 400
+    let reseedBatch = db.batch();
+    let count = 0;
+
+    for (const hostelId of Object.keys(defaultState.mealsByHostel)) {
+      const days = defaultState.mealsByHostel[hostelId];
+      for (const day of days) {
+        for (const type of ['Breakfast', 'Lunch', 'Dinner']) {
+          const meal = day.meals[type];
+          reseedBatch.set(db.collection('meals').doc(meal.id), {
+            ...meal,
+            hostelId,
+            date: day.date,
+            label: day.label,
+            isWeekend: day.isWeekend
+          });
+          count++;
+          if (count === 400) {
+            await reseedBatch.commit();
+            reseedBatch = db.batch();
+            count = 0;
+          }
+        }
+      }
+    }
+    
+    // Add waste logs
+    for (const w of defaultState.wasteLog) {
+      reseedBatch.set(db.collection('wasteLog').doc(String(w.id)), w);
+      count++;
+      if (count === 400) {
+        await reseedBatch.commit();
+        reseedBatch = db.batch();
+        count = 0;
+      }
+    }
+
+    // Add audit events
+    for (const a of defaultState.auditLog) {
+      reseedBatch.set(db.collection('auditLog').doc(String(a.ts)), a);
+      count++;
+      if (count === 400) {
+        await reseedBatch.commit();
+        reseedBatch = db.batch();
+        count = 0;
+      }
+    }
+
+    if (count > 0) {
+      await reseedBatch.commit();
+    }
+  } else {
+    state = seedState();
+    await storeSet('foodsys:state', state, true);
+  }
+}
+
+/* ============================================================
+   FIREBASE CONSOLE GUI CONTROLLERS
+   ============================================================ */
+function setupFirebaseConsole() {
+  const badge = document.getElementById('sync-badge');
+  const modal = document.getElementById('firebase-modal');
+  const closeBtn = document.getElementById('firebase-modal-close');
+  const saveBtn = document.getElementById('firebase-modal-save');
+  const disconnectBtn = document.getElementById('firebase-modal-disconnect');
+  const textarea = document.getElementById('firebase-config-text');
+
+  badge.onclick = () => {
+    if (!me || me.role !== 'admin') {
+      toast('Cloud configuration is restricted to administrators.', true);
+      return;
+    }
+    const configStr = localStorage.getItem('foodsys:firebaseConfig');
+    textarea.value = configStr || '';
+    if (configStr) {
+      disconnectBtn.style.display = 'block';
+    } else {
+      disconnectBtn.style.display = 'none';
+    }
+    modal.classList.remove('hidden');
+  };
+
+  closeBtn.onclick = () => {
+    modal.classList.add('hidden');
+  };
+
+  saveBtn.onclick = async () => {
+    const val = textarea.value.trim();
+    if (!val) {
+      toast('Please enter a valid Firebase configuration JSON.', true);
+      return;
+    }
+    try {
+      const config = JSON.parse(val);
+      if (!config.apiKey || !config.projectId) {
+        throw new Error('Config missing apiKey or projectId');
+      }
+      localStorage.setItem('foodsys:firebaseConfig', val);
+      toast('Firebase config saved! Connecting...');
+      modal.classList.add('hidden');
+      
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('app').classList.add('hidden');
+      await init();
+    } catch(e) {
+      toast('Invalid JSON or config fields. Ensure it is correct.', true);
+      console.error(e);
+    }
+  };
+
+  disconnectBtn.onclick = async () => {
+    if (confirm('Disconnect from Firebase and switch back to local browser storage?')) {
+      localStorage.removeItem('foodsys:firebaseConfig');
+      toast('Disconnected. Reverting to Local Storage...');
+      modal.classList.add('hidden');
+      
+      clearSync();
+      
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('app').classList.add('hidden');
+      await init();
+    }
+  };
+}
+
+function setupMenuEditModal() {
+  const modal = document.getElementById('menu-modal');
+  const closeBtn = document.getElementById('menu-modal-close');
+  const saveBtn = document.getElementById('menu-modal-save');
+  const dishInput = document.getElementById('edit-menu-dish');
+  const nonvegInput = document.getElementById('edit-menu-has-nonveg');
+  const mealIdInput = document.getElementById('edit-menu-meal-id');
+
+  closeBtn.onclick = () => {
+    modal.classList.add('hidden');
+  };
+
+  saveBtn.onclick = async () => {
+    const id = mealIdInput.value;
+    const newDish = dishInput.value.trim();
+    const hasNonveg = nonvegInput.checked;
+
+    if (!newDish) {
+      toast('Dish name cannot be empty.', true);
+      return;
+    }
+
+    let foundMeal = null;
+    let foundDay = null;
+    const days = state.mealsByHostel[me.hostelId];
+    for (const d of days) {
+      for (const t of ['Breakfast', 'Lunch', 'Dinner']) {
+        if (d.meals[t].id === id) {
+          foundMeal = d.meals[t];
+          foundDay = d;
+          break;
+        }
+      }
+      if (foundMeal) break;
+    }
+
+    if (foundMeal) {
+      foundMeal.dish = newDish;
+      foundMeal.hasNonveg = hasNonveg;
+      await dbSetMeal(foundMeal);
+      
+      pushAudit(`Kitchen Staff updated menu for ${foundDay.label} ${foundMeal.type} to: "${newDish}".`);
+      toast('Menu updated successfully!');
+      
+      modal.classList.add('hidden');
+      
+      const el = document.getElementById('view-main');
+      if (el) {
+        renderKitchen(el);
+      }
+    } else {
+      toast('Meal not found.', true);
+    }
+  };
+}
+
+function setupSupplierInvoiceModals() {
+  const sModal = document.getElementById('supplier-modal');
+  const sClose = document.getElementById('supplier-modal-close');
+  const sDelete = document.getElementById('supplier-modal-delete');
+  const sSave = document.getElementById('supplier-modal-save');
+  const sTitle = document.getElementById('supplier-modal-title');
+  const sIndex = document.getElementById('edit-supplier-index');
+  const sName = document.getElementById('edit-supplier-name');
+  const sCategory = document.getElementById('edit-supplier-category');
+  const sContact = document.getElementById('edit-supplier-contact');
+  const sDelivery = document.getElementById('edit-supplier-delivery');
+
+  sClose.onclick = () => sModal.classList.add('hidden');
+  sDelete.onclick = async () => {
+    const idx = parseInt(sIndex.value, 10);
+    if (!isNaN(idx) && idx >= 0) {
+      if (confirm(`Are you sure you want to delete supplier "${state.suppliers[idx].name}"?`)) {
+        const deletedName = state.suppliers[idx].name;
+        state.suppliers.splice(idx, 1);
+        await persistState();
+        pushAudit(`Admin deleted supplier "${deletedName}".`);
+        toast('Supplier deleted.');
+        sModal.classList.add('hidden');
+        renderBilling();
+      }
+    }
+  };
+  sSave.onclick = async () => {
+    const name = sName.value.trim();
+    const category = sCategory.value;
+    const contact = sContact.value.trim();
+    const delivery = sDelivery.value.trim();
+
+    if (!name || !contact || !delivery) {
+      toast('Please fill out all supplier fields.', true);
+      return;
+    }
+
+    const idx = parseInt(sIndex.value, 10);
+    if (!isNaN(idx) && idx >= 0) {
+      state.suppliers[idx] = { id: state.suppliers[idx].id, name, category, contact, delivery };
+      pushAudit(`Admin updated supplier profile for "${name}".`);
+      toast('Supplier profile updated.');
+    } else {
+      const nextId = 'S' + (state.suppliers.length + 1);
+      state.suppliers.push({ id: nextId, name, category, contact, delivery });
+      pushAudit(`Admin registered new supplier partner "${name}".`);
+      toast('New supplier registered.');
+    }
+
+    await persistState();
+    sModal.classList.add('hidden');
+    renderBilling();
+  };
+
+  const iModal = document.getElementById('invoice-modal');
+  const iClose = document.getElementById('invoice-modal-close');
+  const iDelete = document.getElementById('invoice-modal-delete');
+  const iSave = document.getElementById('invoice-modal-save');
+  const iTitle = document.getElementById('invoice-modal-title');
+  const iIndex = document.getElementById('edit-invoice-index');
+  const iMonth = document.getElementById('edit-invoice-month');
+  const iSupplier = document.getElementById('edit-invoice-supplier');
+  const iItems = document.getElementById('edit-invoice-items');
+  const iAmount = document.getElementById('edit-invoice-amount');
+  const iStatus = document.getElementById('edit-invoice-status');
+
+  iClose.onclick = () => iModal.classList.add('hidden');
+  iDelete.onclick = async () => {
+    const idx = parseInt(iIndex.value, 10);
+    if (!isNaN(idx) && idx >= 0) {
+      if (confirm('Are you sure you want to delete this invoice?')) {
+        const deletedId = state.invoices[idx].id;
+        state.invoices.splice(idx, 1);
+        await persistState();
+        pushAudit(`Admin deleted invoice "${deletedId}".`);
+        toast('Invoice deleted.');
+        iModal.classList.add('hidden');
+        renderBilling();
+      }
+    }
+  };
+  iSave.onclick = async () => {
+    const month = iMonth.value.trim();
+    const supplier = iSupplier.value;
+    const items = iItems.value.trim();
+    const amount = parseInt(iAmount.value, 10);
+    const status = iStatus.value;
+
+    if (!month || !supplier || !items || isNaN(amount) || amount <= 0) {
+      toast('Please fill out all invoice fields with valid values.', true);
+      return;
+    }
+
+    const idx = parseInt(iIndex.value, 10);
+    if (!isNaN(idx) && idx >= 0) {
+      state.invoices[idx] = { id: state.invoices[idx].id, month, supplier, items, amount, status };
+      pushAudit(`Admin updated invoice "${state.invoices[idx].id}".`);
+      toast('Invoice updated.');
+    } else {
+      const yyyymm = month.replace(' ', '-').toLowerCase();
+      const nextId = `INV-${yyyymm}-${state.invoices.length + 1}`;
+      state.invoices.push({ id: nextId, month, supplier, items, amount, status });
+      pushAudit(`Admin recorded new invoice "${nextId}" for ${supplier}.`);
+      toast('New invoice recorded.');
+    }
+
+    await persistState();
+    iModal.classList.add('hidden');
+    renderBilling();
+  };
+}
+
+function openAddSupplier() {
+  const sModal = document.getElementById('supplier-modal');
+  document.getElementById('supplier-modal-title').textContent = '➕ Add Supplier';
+  document.getElementById('edit-supplier-index').value = '';
+  document.getElementById('edit-supplier-name').value = '';
+  document.getElementById('edit-supplier-category').value = 'Grains & Pulses';
+  document.getElementById('edit-supplier-contact').value = '';
+  document.getElementById('edit-supplier-delivery').value = '';
+  document.getElementById('supplier-modal-delete').style.display = 'none';
+  sModal.classList.remove('hidden');
+}
+
+function openEditSupplier(idx) {
+  const sModal = document.getElementById('supplier-modal');
+  const s = state.suppliers[idx];
+  if (!s) return;
+
+  document.getElementById('supplier-modal-title').textContent = '✏️ Edit Supplier';
+  document.getElementById('edit-supplier-index').value = idx;
+  document.getElementById('edit-supplier-name').value = s.name;
+  document.getElementById('edit-supplier-category').value = s.category;
+  document.getElementById('edit-supplier-contact').value = s.contact;
+  document.getElementById('edit-supplier-delivery').value = s.delivery;
+  document.getElementById('supplier-modal-delete').style.display = 'block';
+  sModal.classList.remove('hidden');
+}
+
+function openAddInvoice() {
+  const iModal = document.getElementById('invoice-modal');
+  const suppSelect = document.getElementById('edit-invoice-supplier');
+  suppSelect.innerHTML = state.suppliers.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+
+  document.getElementById('invoice-modal-title').textContent = '➕ Add Invoice';
+  document.getElementById('edit-invoice-index').value = '';
+  document.getElementById('edit-invoice-month').value = 'July 2026';
+  document.getElementById('edit-invoice-items').value = '';
+  document.getElementById('edit-invoice-amount').value = '';
+  document.getElementById('edit-invoice-status').value = 'Paid';
+  document.getElementById('invoice-modal-delete').style.display = 'none';
+  iModal.classList.remove('hidden');
+}
+
+function openEditInvoice(idx) {
+  const iModal = document.getElementById('invoice-modal');
+  const inv = state.invoices[idx];
+  if (!inv) return;
+
+  const suppSelect = document.getElementById('edit-invoice-supplier');
+  suppSelect.innerHTML = state.suppliers.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+
+  document.getElementById('invoice-modal-title').textContent = '✏️ Edit Invoice';
+  document.getElementById('edit-invoice-index').value = idx;
+  document.getElementById('edit-invoice-month').value = inv.month;
+  document.getElementById('edit-invoice-supplier').value = inv.supplier;
+  document.getElementById('edit-invoice-items').value = inv.items;
+  document.getElementById('edit-invoice-amount').value = inv.amount;
+  document.getElementById('edit-invoice-status').value = inv.status;
+  document.getElementById('invoice-modal-delete').style.display = 'block';
+  iModal.classList.remove('hidden');
+}
+
+function sanitizeState() {
+  if (!state) state = seedState();
+  if (!state.hostels) state.hostels = HOSTELS;
+  if (!state.settings) state.settings = { costPerServing:22, gramsPerServing:350, baselineWastePct:22 };
+  if (!state.context) state.context = { exam:false, rain:false, holiday:false };
+
+  const defaults = seedState();
+  if (!state.wasteLog || state.wasteLog.length === 0) {
+    state.wasteLog = defaults.wasteLog;
+  }
+  if (!state.auditLog || state.auditLog.length === 0) {
+    state.auditLog = defaults.auditLog;
+  }
+  if (!state.wasteSeq || state.wasteSeq <= 1) {
+    state.wasteSeq = state.wasteLog.reduce((m, l) => Math.max(m, l.id), 0) + 1;
+  }
+  if (!state.mealsByHostel) {
+    state.mealsByHostel = defaults.mealsByHostel;
+  }
+  if (!state.suppliers || state.suppliers.length === 0) {
+    state.suppliers = JSON.parse(JSON.stringify(MOCK_SUPPLIERS));
+  }
+  if (!state.invoices || state.invoices.length === 0) {
+    state.invoices = JSON.parse(JSON.stringify(MOCK_INVOICES));
+  }
+}
+
+/* ============================================================
+   INIT / LOGIN
+   ============================================================ */
+async function init(){
+  me = await storeGet('foodsys:me', false);
+  
+  const hasFirebase = await initFirebase();
+  if (hasFirebase) {
+    await startSync();
+  } else {
+    state = await storeGet('foodsys:state', true);
+    sanitizeState();
+    await storeSet('foodsys:state', state, true);
+
+    document.getElementById('loading').classList.add('hidden');
+    if(me && me.role){
+      showApp();
+    }else{
+      showLogin();
+    }
+  }
+}
+
+const ROLE_DEFS = [
+  { key:'student', label:'Student', desc:'RSVP for meals and track your week.' },
+  { key:'kitchen', label:'Kitchen Staff', desc:'Read forecasts, prep to the ticket, log service.' },
+  { key:'admin', label:'Hostel Admin', desc:'Analytics, settings, and audit trail.' },
+];
+let selectedRole = null;
+
+function showLogin(){
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+  const grid = document.getElementById('role-grid');
+  grid.innerHTML = ROLE_DEFS.map(r=>`
+    <button type="button" class="role-card" data-role="${r.key}"><b>${r.label}</b><span>${r.desc}</span></button>
+  `).join('');
+  grid.querySelectorAll('.role-card').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      selectedRole = btn.dataset.role;
+      grid.querySelectorAll('.role-card').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      
+      const hostelField = document.getElementById('login-hostel-field');
+      const passField = document.getElementById('login-password-field');
+      const nameLabel = document.getElementById('login-name-label');
+      const nameInput = document.getElementById('login-name');
+      
+      if (selectedRole === 'admin') {
+        hostelField.classList.add('hidden');
+        passField.classList.remove('hidden');
+        nameLabel.textContent = 'Admin Username';
+        nameInput.placeholder = 'e.g. adminuser';
+      } else {
+        hostelField.classList.remove('hidden');
+        passField.classList.add('hidden');
+        nameLabel.textContent = 'Your name';
+        nameInput.placeholder = 'e.g. Ananya Rao';
+      }
+    });
+  });
+  const hostelSel = document.getElementById('login-hostel');
+  hostelSel.innerHTML = state.hostels.map(h=>`<option value="${h.id}">${h.name}</option>`).join('');
+
+  document.getElementById('login-submit').onclick = async ()=>{
+    const name = document.getElementById('login-name').value.trim();
+    const password = document.getElementById('login-password').value;
+    const err = document.getElementById('login-error');
+    
+    if(!selectedRole || !name){ 
+      err.textContent = 'Pick a role and enter your name/username to continue.';
+      err.style.display='block'; 
+      return; 
+    }
+    
+    if (selectedRole === 'admin') {
+      if (name !== 'adminuser' || password !== '12345') {
+        err.textContent = 'Invalid Admin username or password.';
+        err.style.display = 'block';
+        return;
+      }
+    }
+    
+    err.style.display='none';
+    me = {
+      role: selectedRole,
+      name,
+      studentId: 'stu-' + Math.random().toString(36).slice(2,9),
+      hostelId: selectedRole==='admin' ? state.hostels[0].id : hostelSel.value,
+    };
+    await persistMe();
+    pushAudit(`${name} signed in as ${selectedRole}.`);
+    showApp();
+  };
+}
+
+function logout(){
+  me = null;
+  storeSet('foodsys:me', null, false);
+  document.getElementById('login-name').value='';
+  document.getElementById('login-password').value='';
+  selectedRole=null;
+  clearSync();
+  showLogin();
+}
+
+/* ============================================================
+   APP SHELL
+   ============================================================ */
+function roleLabel(){ return ROLE_DEFS.find(r=>r.key===me.role).label; }
+
+function showApp(){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('who-badge').innerHTML = `${me.name} · <b>${roleLabel()}</b>`;
+  document.getElementById('switch-role').onclick = logout;
+
+  const badge = document.getElementById('sync-badge');
+  if (me && me.role === 'admin') {
+    badge.style.cursor = 'pointer';
+    badge.title = 'Click to configure Firebase Cloud database connection';
+  } else {
+    badge.style.cursor = 'default';
+    badge.title = 'Database sync status (restricted to admin)';
+  }
+
+  const tabDefs = [{ key:'overview', label:'Overview' }];
+  if(me.role==='student') tabDefs.push({ key:'main', label:'My RSVPs' });
+  if(me.role==='kitchen') tabDefs.push({ key:'main', label:'Kitchen Dashboard' });
+  if(me.role==='admin') {
+    tabDefs.push({ key:'main', label:'Admin & Analytics' });
+    tabDefs.push({ key:'billing', label:'Procurement & Bills' });
+  }
+
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = tabDefs.map((t,i)=>`<button data-tab="${t.key}" class="${i===0?'active':''}">${t.label}</button>`).join('');
+  tabs.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      tabs.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      document.getElementById('view-'+b.dataset.tab).classList.add('active');
+      activeTab = b.dataset.tab;
+      if(activeTab==='main') renderMain();
+      if(activeTab==='billing') renderBilling();
+    });
+  });
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-overview').classList.add('active');
+
+  setupFirebaseConsole();
+  setupMenuEditModal();
+  setupSupplierInvoiceModals();
+  renderOverview();
+  renderMain();
+}
+
+/* ============================================================
+   FORECAST ENGINE
+   ============================================================ */
+function totalRsvp(meal){ 
+  return meal.simulatedOthers + (meal.rsvpBy ? Object.keys(meal.rsvpBy).filter(k => meal.rsvpBy[k] === 'veg' || meal.rsvpBy[k] === 'nonveg').length : 0); 
+}
+
+function formatDishName(dish, hasNonveg) {
+  if (!dish) return '';
+  if (!hasNonveg) {
+    return `<span style="color:var(--mint-deep); font-weight:600;">${dish}</span>`;
+  }
+  if (dish.includes('/')) {
+    const parts = dish.split('/');
+    const formattedParts = parts.map(part => {
+      const p = part.trim();
+      const isVeg = p.includes('Veg') || p.includes('Paneer') || p.includes('Kofta') || p.includes('Cheese') || p.includes('Sandwich');
+      const color = isVeg ? 'var(--mint-deep)' : 'var(--danger)';
+      return `<span style="color:${color}; font-weight:600;">${part}</span>`;
+    });
+    return formattedParts.join(' <span style="color:var(--ink-soft); font-weight:normal;">/</span> ');
+  }
+  return `<span style="color:var(--danger); font-weight:600;">${dish}</span>`;
+}
+
+function computeForecast(meal, isWeekend){
+  const base = meal.baseHistory;
+  const rsvpSignal = totalRsvp(meal) * 1.15;
+  let predicted = base*0.35 + rsvpSignal*0.65;
+
+  const reasons = [];
+  let mult = 1;
+  if(state.context.exam){ mult -= 0.12; reasons.push({label:'Exam week', delta:-12}); }
+  if(state.context.rain){ mult += 0.05; reasons.push({label:'Heavy rain', delta:+5}); }
+  if(state.context.holiday){ mult -= 0.30; reasons.push({label:'Public holiday', delta:-30}); }
+  predicted = Math.max(8, Math.round(predicted*mult));
+
+  const prep = Math.round(predicted * 1.08);
+  const kg = ((prep * state.settings.gramsPerServing)/1000).toFixed(1);
+  const coverage = totalRsvp(meal) / predicted;
+  let confidence = 'Medium';
+  if(coverage > 0.75) confidence = 'High';
+  if(coverage < 0.45) confidence = 'Low';
+
+  return { predicted, prep, kg, reasons, confidence, base, isWeekend };
+}
+
+/* ============================================================
+   OVERVIEW (shared across roles)
+   ============================================================ */
+function renderOverview(){
+  const el = document.getElementById('view-overview');
+  const totalHostels = state.hostels.length;
+  const totalResidents = state.hostels.reduce((s,h)=>s+h.residents,0);
+  const totalWasteEntries = state.wasteLog.length;
+  const avgWaste = totalWasteEntries
+    ? (state.wasteLog.reduce((s,w)=>s+(w.prepared-w.consumed)/w.prepared*100,0)/totalWasteEntries)
+    : state.settings.baselineWastePct;
+
+  // Climate Impact Calculations
+  const totalPrepared = state.wasteLog.reduce((s,w)=>s+w.prepared,0);
+  const totalConsumed = state.wasteLog.reduce((s,w)=>s+w.consumed,0);
+  const wasted = totalPrepared - totalConsumed;
+  const baselineWaste = totalPrepared * (state.settings.baselineWastePct / 100);
+  const servingsSaved = Math.max(0, baselineWaste - wasted);
+  const kgSaved = ((servingsSaved * state.settings.gramsPerServing) / 1000).toFixed(1);
+  const co2Saved = (kgSaved * 2.5).toFixed(1);
+  const waterSaved = Math.round(kgSaved * 1500);
+
+  el.innerHTML = `
+    <span class="eyebrow">Problem &amp; Solution</span>
+    <h2 class="section-title">Static prep is costing the kitchen — and the planet</h2>
+    <p class="section-sub">Institutional kitchens typically over-prepare by 15–30% because they cook to a fixed estimate, not real demand. This system closes that loop across ${totalHostels} hostels and ${totalResidents} residents.</p>
+    <div class="grid3">
+      <div class="pillar"><div class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h3>RSVP-Driven Prep</h3><p>Students confirm meals ahead of time, generating a live demand signal instead of a guess.</p></div>
+      <div class="pillar"><div class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3.4" stroke="currentColor" stroke-width="2"/><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div><h3>AI Turnout Forecasting</h3><p>Blends per-hostel history, live RSVPs, and context — exams, rain, holidays — into a prep number.</p></div>
+      <div class="pillar"><div class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 19h16M6 19V9l3-4h6l3 4v10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h3>IoT Waste Tracking</h3><p>Every service is logged against what was actually served — an auditable, campus-wide waste trend.</p></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="n">${totalHostels}</div><div class="l">Hostels on the system</div></div>
+      <div class="stat"><div class="n">${avgWaste.toFixed(1)}%</div><div class="l">${totalWasteEntries?'Measured waste rate':'Baseline waste rate (no logs yet)'}</div></div>
+      <div class="stat"><div class="n">${totalWasteEntries}</div><div class="l">Services logged campus-wide</div></div>
+      <div class="stat"><div class="n">${state.auditLog.length}</div><div class="l">Audit events recorded</div></div>
+    </div>
+    
+    <div class="card" style="margin-top:24px; background:linear-gradient(155deg, var(--bg-alt), #081e19); border:1px solid var(--rule-dark); border-radius:var(--radius); padding:24px;">
+      <h3 style="font-family:'Fraunces', serif; margin:0 0 8px; color:var(--amber-pale); font-size:18px; display:flex; align-items:center; gap:8px;">
+        🌱 Cumulative Climate Impact <span style="font-size:11px; font-family:'IBM Plex Mono', monospace; background:rgba(63,167,150,0.15); color:var(--mint); padding:2px 8px; border-radius:10px;">1M1B Climate Action</span>
+      </h3>
+      <p style="font-size:13.5px; opacity:.85; line-height:1.5; margin:0 0 20px;">By using dynamic AI forecasts instead of static baseline production, this system actively prevents food surplus production, reducing landfill organic waste emissions and conserving upstream agricultural resources.</p>
+      <div class="stat-row" style="margin:0;">
+        <div class="stat" style="background:rgba(63,167,150,0.06); border-color:rgba(63,167,150,0.15);"><div class="n" style="color:var(--mint);">${kgSaved} kg</div><div class="l">Food Waste Prevented</div></div>
+        <div class="stat" style="background:rgba(217,140,61,0.06); border-color:rgba(217,140,61,0.15);"><div class="n" style="color:var(--amber);">${co2Saved} kg</div><div class="l">CO₂ Emissions Saved (CO₂e)</div></div>
+        <div class="stat" style="background:rgba(193,84,60,0.06); border-color:rgba(193,84,60,0.15);"><div class="n" style="color:#E8A695;">${waterSaved.toLocaleString('en-IN')} L</div><div class="l">Water Conserved</div></div>
+      </div>
+    </div>
+
+    <div style="margin-top:30px;">
+      <span class="eyebrow">Scaling strategy</span>
+      <h2 class="section-title" style="font-size:20px;">Three vectors for growth beyond the pilot hostel</h2>
+      <div class="grid3">
+        <div class="pillar" style="gap:7px;"><h3 style="font-size:15px;">Across locations</h3><p>Hostel 14 was the pilot; Hostel 12 and Girls Hostel 3 are already live in this build, each with its own calendar and forecast.</p></div>
+        <div class="pillar" style="gap:7px;"><h3 style="font-size:15px;">Across user groups</h3><p>The same RSVP → forecast → waste loop extends to staff canteens, day-scholar meal plans, and event catering.</p></div>
+        <div class="pillar" style="gap:7px;"><h3 style="font-size:15px;">Through partnerships</h3><p>Campus ERP integration and IoT scale vendors replace the manual "log a service" step with automatic readings.</p></div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   MAIN VIEW ROUTER
+   ============================================================ */
+function renderMain(){
+  const el = document.getElementById('view-main');
+  if(me.role==='student') renderStudent(el);
+  if(me.role==='kitchen') renderKitchen(el);
+  if(me.role==='admin') renderAdmin(el);
+}
+
+/* ---------------- STUDENT ---------------- */
+function renderStudent(el){
+  const hostel = state.hostels.find(h=>h.id===me.hostelId);
+  const days = state.mealsByHostel[me.hostelId];
+  const day = days[activeDay.student];
+  const myConfirmedCount = days.reduce((s,d)=>s + Object.values(d.meals).filter(m=>m.rsvpBy && (m.rsvpBy[me.studentId] === 'veg' || m.rsvpBy[me.studentId] === 'nonveg')).length, 0);
+
+  el.innerHTML = `
+    <span class="eyebrow">${hostel.name}</span>
+    <h2 class="section-title">Confirm your meals</h2>
+    <p class="section-sub">RSVPs close 3 hours before service and feed straight into the kitchen's forecast. You've confirmed <b>${myConfirmedCount}</b> meal${myConfirmedCount===1?'':'s'} this week.</p>
+    <div class="day-tabs" id="student-days"></div>
+    <div id="student-meals"></div>
+  `;
+  const dayTabs = document.getElementById('student-days');
+  dayTabs.innerHTML = days.map((d,i)=>`<button class="day-chip ${d.isWeekend?'weekend':''} ${i===activeDay.student?'active':''}" data-i="${i}">${d.label}${d.isWeekend?' <span class="d1">·wknd</span>':''}</button>`).join('');
+  dayTabs.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ activeDay.student = +b.dataset.i; renderStudent(el); }));
+
+  const listEl = document.getElementById('student-meals');
+  listEl.innerHTML = ['Breakfast','Lunch','Dinner'].map(type=>{
+    const m = day.meals[type];
+    const pref = m.rsvpBy ? m.rsvpBy[me.studentId] : null;
+    const hasNonveg = m.hasNonveg;
+    return `
+    <div class="rsvp-item">
+      <div class="meta">
+        <div class="meal">${type}: ${formatDishName(m.dish, hasNonveg)}</div>
+        <div style="font-size:12.5px; opacity:.6; margin-top:2px;">🕒 ${day.label}, ${MEAL_TIMES[type]}</div>
+        <div class="count">${totalRsvp(m)} confirmed so far <span style="opacity:.5;">·</span> <b>${Math.round(totalRsvp(m)/m.baseHistory*100)}%</b> of usual turnout</div>
+        <div class="diet-chips">
+          <span class="chip ${pref==='veg'?'active':''}" style="${pref==='veg'?'background:var(--mint); border-color:var(--mint); color:#062521;':''}">🌱 Veg ${m.dietVeg}</span>
+          ${hasNonveg ? `<span class="chip ${pref==='nonveg'?'active nv':''}" style="${pref==='nonveg'?'background:var(--danger); border-color:var(--danger); color:var(--paper);':''}">Non-veg ${m.dietNonveg}</span>` : ''}
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end; flex-shrink:0;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn ${pref==='veg'?'on':'ghost'} sm" data-rsvp="${m.id}" data-action="veg">🌱 Attend Veg</button>
+          ${hasNonveg ? `<button class="btn ${pref==='nonveg'?'on nv':'ghost'} sm" data-rsvp="${m.id}" data-action="nonveg" style="${pref==='nonveg'?'background:var(--danger); color:var(--paper);':''}">🍗 Attend Non-Veg</button>` : ''}
+          <button class="btn ${pref==='no'?'on':'ghost'} sm" data-rsvp="${m.id}" data-action="no" style="${pref==='no'?'background:#7C8B84; color:var(--paper);':''}">❌ Can't make it</button>
+        </div>
+        <div class="status-msg" style="font-size:11px; font-family:'IBM Plex Mono', monospace; color:${pref ? (pref==='no'?'#7C8B84':(pref==='nonveg'?'var(--danger)':'var(--mint)')) : 'var(--amber)'}; font-weight:600; margin-top:2px;">
+          ${pref === 'veg' ? '✓ Attend (Veg) saved' : pref === 'nonveg' ? '✓ Attend (Non-Veg) saved' : pref === 'no' ? '✓ Not Attending saved' : '⚠️ Response required'}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-rsvp]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const m = Object.values(day.meals).find(mm=>mm.id===btn.dataset.rsvp);
+      await setRsvp(m, btn.dataset.action);
+    });
+  });
+}
+
+async function setRsvp(meal, action){
+  if (!meal.rsvpBy) meal.rsvpBy = {};
+  const was = meal.rsvpBy[me.studentId];
+  if (was === action) {
+    toast(`Already marked as ${action === 'veg' ? 'Veg' : action === 'nonveg' ? 'Non-Veg' : "Can't make it"}.`);
+    return;
+  }
+
+  // 1. Remove previous preference effect from totals
+  if (was === 'veg') {
+    meal.dietVeg = Math.max(0, meal.dietVeg - 1);
+  } else if (was === 'nonveg') {
+    meal.dietNonveg = Math.max(0, meal.dietNonveg - 1);
+  }
+
+  // 2. Apply new preference effect to totals
+  if (action === 'veg') {
+    meal.dietVeg += 1;
+    toast(`Confirmed Veg for ${meal.type}.`);
+    pushAudit(`RSVP'd Veg for ${meal.type} on ${meal.id.split('-').slice(1,4).join('-')}.`);
+  } else if (action === 'nonveg') {
+    meal.dietNonveg += 1;
+    toast(`Confirmed Non-Veg for ${meal.type}.`);
+    pushAudit(`RSVP'd Non-Veg for ${meal.type} on ${meal.id.split('-').slice(1,4).join('-')}.`);
+  } else if (action === 'no') {
+    toast(`Marked as "Can't make it" for ${meal.type}.`);
+    pushAudit(`Marked "Can't make it" for ${meal.type} on ${meal.id.split('-').slice(1,4).join('-')}.`);
+  }
+
+  // 3. Save to data structures
+  meal.rsvpBy[me.studentId] = action;
+  await dbSetMeal(meal);
+
+  // 4. Local re-render if database sync isn't active
+  if (!syncActive) {
+    renderStudent(document.getElementById('view-main'));
+    renderOverview();
+  }
+}
+
+/* ---------------- KITCHEN ---------------- */
+const CTX_DEFS = [ { key:'exam', label:'Exam week' }, { key:'rain', label:'Heavy rain' }, { key:'holiday', label:'Public holiday' } ];
+
+function renderKitchen(el){
+  const hostel = state.hostels.find(h=>h.id===me.hostelId);
+  const days = state.mealsByHostel[me.hostelId];
+  const day = days[activeDay.kitchen];
+
+  el.innerHTML = `
+    <div class="row-between">
+      <div><span class="eyebrow">${hostel.name}</span><h2 class="section-title" style="margin-bottom:0;">Today's prep tickets</h2></div>
+    </div>
+    <p class="section-sub">Predicted turnout blends this hostel's history with live RSVPs, then adjusts for context below. Log the actual service once it's done to feed the waste analytics.</p>
+    <div class="ctx-panel" id="ctx-panel"></div>
+    <div class="day-tabs" id="kitchen-days"></div>
+    <div class="grid3" id="ticket-rail"></div>
+  `;
+
+  const ctxEl = document.getElementById('ctx-panel');
+  ctxEl.innerHTML = CTX_DEFS.map(c=>`<label class="ctx-toggle ${state.context[c.key]?'active':''}"><input type="checkbox" ${state.context[c.key]?'checked':''} data-ctx="${c.key}"> ${c.label}</label>`).join('');
+  ctxEl.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('change', async ()=>{
+      state.context[inp.dataset.ctx] = !state.context[inp.dataset.ctx];
+      await dbSetContext();
+      if (!syncActive) {
+        renderKitchen(el);
+      }
+    });
+  });
+
+  const dayTabs = document.getElementById('kitchen-days');
+  dayTabs.innerHTML = days.map((d,i)=>`<button class="day-chip ${d.isWeekend?'weekend':''} ${i===activeDay.kitchen?'active':''}" data-i="${i}">${d.label}</button>`).join('');
+  dayTabs.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ activeDay.kitchen = +b.dataset.i; renderKitchen(el); }));
+
+  const rail = document.getElementById('ticket-rail');
+  rail.innerHTML = ['Breakfast','Lunch','Dinner'].map(type=>{
+    const m = day.meals[type];
+    const f = computeForecast(m, day.isWeekend);
+    const already = state.wasteLog.some(w=>w.mealId===m.id);
+    const hasNonveg = m.hasNonveg;
+    const dishColor = hasNonveg ? 'var(--danger)' : 'var(--mint-deep)';
+    return `
+    <div class="ticket">
+      <div class="ticket-head">
+        <div>
+          <div class="meal">${type}</div>
+          <div class="when" style="font-size:12.5px; margin:2px 0;">🍴 ${formatDishName(m.dish, hasNonveg)}</div>
+          <div class="when">${day.label} · ${MEAL_TIMES[type]}</div>
+          <button class="btn ghost sm" data-edit-menu="${m.id}" style="padding:4px 8px; font-size:11px; margin-top:6px; border-color:var(--rule); color:var(--ink);">✏️ Edit Menu</button>
+        </div>
+        <div class="ticket-id">TICKET<br>#${m.id.slice(-6)}</div>
+      </div>
+      <div class="ticket-rows">
+        <div><div class="k">RSVP'd</div><div class="v">${totalRsvp(m)}</div></div>
+        <div><div class="k">Historical avg</div><div class="v">${f.base}</div></div>
+        <div><div class="k">AI predicted</div><div class="v big">${f.predicted}</div></div>
+        <div><div class="k">Prep quantity</div><div class="v big">${f.prep} <span style="font-size:11px; font-weight:500;">srv</span></div></div>
+      </div>
+      <div style="font-size:10.5px; color:var(--ink-faint); margin-bottom:10px;">≈ ${f.kg} kg raw material at ${state.settings.gramsPerServing}g/serving</div>
+      <div class="tags">
+        <span class="tag ${f.confidence==='High'?'':'warn'}">${f.confidence} confidence</span>
+        ${day.isWeekend?'<span class="tag">Weekend pattern</span>':''}
+        ${f.reasons.map(r=>`<span class="tag warn">${r.label} ${r.delta>0?'+':''}${r.delta}%</span>`).join('')}
+        ${already?'<span class="tag done">Service logged ✓</span>':''}
+      </div>
+      ${already ? '' : `
+      <div class="log-inline">
+        <div class="row">
+          <div class="field"><label>Prepared</label><input type="number" min="1" id="prep-${m.id}" value="${f.prep}"></div>
+          <div class="field"><label>Consumed</label><input type="number" min="0" id="cons-${m.id}" value="${Math.round(f.prep*0.86)}"></div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="btn ghost sm" data-iot="${m.id}">Simulate IoT reading</button>
+          <button class="btn on sm" data-log="${m.id}">Log service</button>
+        </div>
+      </div>`}
+    </div>`;
+  }).join('');
+
+  rail.querySelectorAll('[data-edit-menu]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.editMenu;
+      const type = Object.keys(day.meals).find(k=>day.meals[k].id===id);
+      const m = day.meals[type];
+      if(!m) return;
+      
+      document.getElementById('edit-menu-meal-id').value = m.id;
+      document.getElementById('edit-menu-meta').innerHTML = `${day.label} · <b>${m.type}</b>`;
+      document.getElementById('edit-menu-dish').value = m.dish || '';
+      document.getElementById('edit-menu-has-nonveg').checked = m.hasNonveg || false;
+      
+      document.getElementById('menu-modal').classList.remove('hidden');
+    });
+  });
+
+  rail.querySelectorAll('[data-iot]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.iot;
+      const prepInput = document.getElementById(`prep-${id}`);
+      const consInput = document.getElementById(`cons-${id}`);
+      const prepared = parseInt(prepInput.value,10) || 0;
+      consInput.value = Math.round(prepared * (0.80 + Math.random()*0.15));
+      toast('IoT scale reading simulated.');
+    });
+  });
+  rail.querySelectorAll('[data-log]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.log;
+      const m = day.meals[Object.keys(day.meals).find(t=>day.meals[t].id===id)];
+      const prepared = parseInt(document.getElementById(`prep-${id}`).value,10) || 0;
+      const consumed = Math.min(prepared, parseInt(document.getElementById(`cons-${id}`).value,10) || 0);
+      if(prepared<=0) return;
+      
+      const newLog = {
+        id: state.wasteSeq++, mealId: m.id, hostelId: me.hostelId,
+        mealLabel: `${m.type} · ${day.label}`, hostelName: hostel.name,
+        prepared, consumed, loggedBy: me.name, ts: Date.now(),
+      };
+      
+      if (syncActive && db) {
+        await dbAddWasteLog(newLog);
+      } else {
+        state.wasteLog.push(newLog);
+        await persistState();
+      }
+      
+      pushAudit(`Logged ${m.type} service at ${hostel.name}: ${consumed}/${prepared} servings claimed.`);
+      toast('Service logged.');
+      if (!syncActive) {
+        renderKitchen(el);
+        renderOverview();
+      }
+    });
+  });
+}
+
+/* ---------------- ADMIN ---------------- */
+function renderAdmin(el){
+  const s = state.settings;
+  el.innerHTML = `
+    <div class="row-between">
+      <div><span class="eyebrow">Campus-wide</span><h2 class="section-title" style="margin-bottom:0;">Admin &amp; Analytics</h2></div>
+      <div class="hostel-select">
+        <label for="admin-hostel-filter" style="font-size:12px; opacity:.65;">Hostel</label>
+        <select id="admin-hostel-filter">
+          <option value="all">All hostels</option>
+          ${HOSTELS.map(h=>`<option value="${h.id}">${h.name}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <p class="section-sub">Lower food cost per student, a waste analytics dashboard, and audit-ready reporting — the admin value proposition, made concrete.</p>
+
+    <div class="stat-row" id="admin-stats"></div>
+
+    <div class="grid2" style="margin-top:24px;">
+      <div class="card">
+        <h3 style="font-family:'Fraunces',serif; margin:0 0 14px; font-size:16px;">Waste % trend</h3>
+        <canvas id="wasteChart" height="220"></canvas>
+      </div>
+      <div class="card">
+        <h3 style="font-family:'Fraunces',serif; margin:0 0 14px; font-size:16px;">Average waste by hostel</h3>
+        <canvas id="hostelChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:16px;">
+      <div class="card">
+        <h3 style="font-family:'Fraunces',serif; margin:0 0 14px; font-size:16px;">Service log</h3>
+        <div class="scroll-table" id="admin-log-table"></div>
+      </div>
+      <div class="card">
+        <h3 style="font-family:'Fraunces',serif; margin:0 0 14px; font-size:16px;">Audit trail</h3>
+        <div class="scroll-table" id="audit-table"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="row-between" style="margin-bottom:14px;">
+        <h3 style="font-family:'Fraunces',serif; margin:0; font-size:16px;">Settings</h3>
+        <div style="display:flex; gap:8px;">
+          <button class="btn sm" id="download-training-data" style="background:#FFD93D; color:#172420;">📥 Export Training Data (CSV)</button>
+          <button class="btn danger sm" id="reset-demo">Reset demo data</button>
+        </div>
+      </div>
+      <div class="settings-grid">
+        <div class="field"><label>Cost per serving (₹)</label><input type="number" id="s-cost" value="${s.costPerServing}"></div>
+        <div class="field"><label>Grams per serving</label><input type="number" id="s-grams" value="${s.gramsPerServing}"></div>
+        <div class="field"><label>Institutional baseline waste (%)</label><input type="number" id="s-baseline" value="${s.baselineWastePct}"></div>
+      </div>
+      <button class="btn on sm" id="save-settings" style="margin-top:16px;">Save settings</button>
+    </div>
+  `;
+
+  document.getElementById('save-settings').addEventListener('click', async ()=>{
+    state.settings.costPerServing = parseFloat(document.getElementById('s-cost').value) || s.costPerServing;
+    state.settings.gramsPerServing = parseFloat(document.getElementById('s-grams').value) || s.gramsPerServing;
+    state.settings.baselineWastePct = parseFloat(document.getElementById('s-baseline').value) || s.baselineWastePct;
+    pushAudit('Updated system settings.');
+    await dbSetSettings();
+    toast('Settings saved.');
+    if (!syncActive) {
+      renderAdmin(el);
+    }
+  });
+
+  document.getElementById('download-training-data').addEventListener('click', () => {
+    const csvRows = [
+      ["Date", "Day", "Meal", "Dish", "Is_Weekend", "Context_Exam", "Context_Rain", "Context_Holiday", "Residents_Total", "Historical_Average_Turnout", "Student_RSVP_Attending", "AI_Predicted_Turnout", "Kitchen_Prepared_Qty", "Actual_Consumed_Qty", "Surplus_Waste_Qty", "Waste_Percentage", "CO2_Saved_kg"],
+      ["2026-07-20", "Monday", "Breakfast", "Idli Sambar & Coconut Chutney", "0", "0", "0", "0", "150", "76", "72", "74", "80", "76", "4", "5.0%", "5.5"],
+      ["2026-07-20", "Monday", "Lunch", "Chole Bhature & Sweet Lassi", "0", "0", "0", "0", "150", "100", "94", "96", "104", "98", "6", "5.8%", "8.2"],
+      ["2026-07-20", "Monday", "Dinner", "Dal Makhani, Mix Veg Sabzi & Roti", "0", "0", "0", "0", "150", "115", "108", "110", "119", "114", "5", "4.2%", "9.0"],
+      ["2026-07-21", "Tuesday", "Breakfast", "Poha with Sev & Jalebi", "0", "0", "1", "0", "150", "76", "82", "80", "86", "84", "2", "2.3%", "4.1"],
+      ["2026-07-21", "Tuesday", "Lunch", "Rajma Chawal & Papad & Pickle", "0", "0", "1", "0", "150", "100", "106", "104", "112", "110", "2", "1.8%", "5.3"],
+      ["2026-07-21", "Tuesday", "Dinner", "Kadhi Pakora, Rice & Phulka", "0", "0", "1", "0", "150", "115", "121", "119", "128", "126", "2", "1.6%", "6.5"],
+      ["2026-07-22", "Wednesday", "Breakfast", "Uttapam & Tomato Chutney", "0", "1", "0", "0", "150", "76", "58", "62", "67", "64", "3", "4.5%", "7.1"],
+      ["2026-07-22", "Wednesday", "Lunch", "Dal Fry, Jeera Aloo & Roti", "0", "1", "0", "0", "150", "100", "78", "82", "88", "85", "3", "3.4%", "8.5"],
+      ["2026-07-22", "Wednesday", "Dinner", "Kadhai Paneer & Butter Naan", "0", "1", "0", "0", "150", "115", "90", "94", "101", "97", "4", "4.0%", "9.8"],
+      ["2026-07-23", "Thursday", "Breakfast", "Pav Bhaji & Sliced Lemon", "0", "0", "0", "0", "150", "76", "74", "75", "81", "78", "3", "3.7%", "5.2"],
+      ["2026-07-23", "Thursday", "Lunch", "Aloo Gobi, Dal Tadka & Steam Rice", "0", "0", "0", "0", "150", "100", "98", "99", "107", "102", "5", "4.7%", "7.5"],
+      ["2026-07-23", "Thursday", "Dinner", "Malai Kofta / Egg Curry & Phulka", "0", "0", "0", "0", "150", "115", "112", "113", "122", "118", "4", "3.3%", "9.2"],
+      ["2026-07-24", "Friday", "Breakfast", "Bread Omelette / Veg Cheese Sandwich", "0", "0", "0", "0", "150", "76", "70", "72", "78", "75", "3", "3.8%", "4.8"],
+      ["2026-07-24", "Friday", "Lunch", "Shahi Paneer, Dal Fry & Phulka", "0", "0", "0", "0", "150", "100", "95", "97", "105", "101", "4", "3.8%", "7.2"],
+      ["2026-07-24", "Friday", "Dinner", "Dal Makhani & Jeera Rice", "0", "0", "0", "0", "150", "115", "106", "108", "117", "112", "5", "4.3%", "8.1"],
+      ["2026-07-25", "Saturday", "Breakfast", "Puri Sabzi & Sweet Sooji Halwa", "1", "0", "0", "0", "150", "61", "54", "56", "60", "56", "4", "6.7%", "4.4"],
+      ["2026-07-25", "Saturday", "Lunch", "Veg Pulao, Curd & Onion Salad", "1", "0", "0", "0", "150", "80", "70", "72", "78", "73", "5", "6.4%", "5.8"],
+      ["2026-07-25", "Saturday", "Dinner", "Paneer Lababdar / Chicken Masala & Phulka", "1", "0", "0", "0", "150", "92", "81", "84", "91", "86", "5", "5.5%", "7.1"],
+      ["2026-07-26", "Sunday", "Breakfast", "Aloo Paratha with Butter & Curd", "1", "0", "0", "1", "150", "61", "34", "38", "41", "38", "3", "7.3%", "6.2"],
+      ["2026-07-26", "Sunday", "Lunch", "Special Veg Biryani & Salan", "1", "0", "0", "1", "150", "80", "44", "48", "52", "47", "5", "9.6%", "8.3"],
+      ["2026-07-26", "Sunday", "Dinner", "Dal Makhani & Phulka / Paneer Butter Masala", "1", "0", "0", "1", "150", "92", "51", "55", "59", "54", "5", "8.5%", "9.5"]
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + csvRows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(",")).join("\n");
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "sustainai_training_data_150_students.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast('Downloaded training dataset (CSV) for 150 students.');
+  });
+
+  document.getElementById('reset-demo').addEventListener('click', async ()=>{
+    if(!confirm('Reset all RSVPs, waste logs, and audit history? This cannot be undone.')) return;
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    
+    try {
+      await dbResetDemo();
+      toast('Demo data reset.');
+    } catch (err) {
+      console.error("Error during reset:", err);
+      toast('Failed to reset demo data: ' + err.message, true);
+    } finally {
+      if (syncActive) {
+        await startSync();
+      } else {
+        renderOverview();
+        renderAdmin(el);
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+      }
+    }
+  });
+
+  const filterSel = document.getElementById('admin-hostel-filter');
+  filterSel.addEventListener('change', ()=> paintAdminData(filterSel.value));
+  paintAdminData('all');
+}
+
+function paintAdminData(hostelFilter){
+  const log = hostelFilter==='all' ? state.wasteLog : state.wasteLog.filter(w=>w.hostelId===hostelFilter);
+  const totalPrepared = log.reduce((s,w)=>s+w.prepared,0);
+  const totalConsumed = log.reduce((s,w)=>s+w.consumed,0);
+  const wasted = totalPrepared-totalConsumed;
+  const avgWaste = totalPrepared ? (wasted/totalPrepared*100) : state.settings.baselineWastePct;
+  const baselineWaste = totalPrepared*(state.settings.baselineWastePct/100);
+  const servingsSaved = Math.max(0, baselineWaste-wasted);
+  const costSaved = Math.round(servingsSaved*state.settings.costPerServing);
+
+  // 1. Render stats row
+  const statsEl = document.getElementById('admin-stats');
+  if (statsEl) {
+    statsEl.innerHTML = [
+      { n: avgWaste.toFixed(1)+'%', l: log.length ? 'Measured waste rate' : 'No services logged yet' },
+      { n: wasted, l:'Servings wasted (logged)' },
+      { n: Math.round(servingsSaved), l:'Servings saved vs. baseline' },
+      { n: '₹'+costSaved.toLocaleString('en-IN'), l:'Estimated cost saved' },
+    ].map(s=>`<div class="stat"><div class="n">${s.n}</div><div class="l">${s.l}</div></div>`).join('');
+  }
+
+  // 2. Render service log table
+  const tblEl = document.getElementById('admin-log-table');
+  if (tblEl) {
+    if(!log.length){
+      tblEl.innerHTML = `<div class="empty">No services logged yet.</div>`;
+    }else{
+      tblEl.innerHTML = `<table><thead><tr><th>Meal</th><th>Hostel</th><th>Prep</th><th>Consumed</th><th>Waste</th></tr></thead><tbody>
+        ${log.slice().reverse().map(w=>{
+          const pct = (w.prepared-w.consumed)/w.prepared*100;
+          return `<tr><td>${w.mealLabel}</td><td>${w.hostelName}</td><td>${w.prepared}</td><td>${w.consumed}</td><td class="${pct<=15?'pct-good':'pct-bad'}">${pct.toFixed(1)}%</td></tr>`;
+        }).join('')}
+      </tbody></table>`;
+    }
+  }
+
+  // 3. Render audit table
+  const auditEl = document.getElementById('audit-table');
+  if (auditEl) {
+    auditEl.innerHTML = state.auditLog.length ? `<table><thead><tr><th>When</th><th>Event</th></tr></thead><tbody>
+      ${state.auditLog.map(a=>`<tr><td style="white-space:nowrap;">${new Date(a.ts).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td><td style="font-family:'Space Grotesk',sans-serif;">${a.action}</td></tr>`).join('')}
+    </tbody></table>` : `<div class="empty">No audit events yet.</div>`;
+  }
+
+  // 4. Render charts defensively
+  const ctx = document.getElementById('wasteChart');
+  const hctx = document.getElementById('hostelChart');
+
+  if (typeof Chart === 'undefined') {
+    if (ctx) ctx.outerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:220px; color:var(--ink-soft); font-size:12.5px; font-family:'Space Grotesk',sans-serif; text-align:center; padding:15px; border:1px dashed var(--rule); border-radius:8px;">📊 Chart.js failed to load. The system is operating offline.</div>`;
+    if (hctx) hctx.outerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:220px; color:var(--ink-soft); font-size:12.5px; font-family:'Space Grotesk',sans-serif; text-align:center; padding:15px; border:1px dashed var(--rule); border-radius:8px;">📊 Chart.js failed to load. The system is operating offline.</div>`;
+  } else {
+    // Waste trend chart
+    if (ctx) {
+      if(wasteChart) { try { wasteChart.destroy(); } catch(e){} }
+      if (log.length > 0) {
+        try {
+          const labels = log.map(w=>'#'+w.id);
+          const data = log.map(w=>+((w.prepared-w.consumed)/w.prepared*100).toFixed(1));
+          const baseline = log.map(()=>state.settings.baselineWastePct);
+
+          wasteChart = new Chart(ctx, {
+            type:'line',
+            data:{ labels, datasets:[
+              { label:'Waste %', data, borderColor:'#2C7C6E', backgroundColor:'rgba(63,167,150,0.18)', fill:true, tension:.3, pointRadius:4, pointBackgroundColor:'#2C7C6E' },
+              { label:'Baseline', data:baseline, borderColor:'#B96F27', borderDash:[6,5], pointRadius:0, fill:false },
+            ]},
+            options:{ responsive:true, plugins:{legend:{labels:{color:'#172420', font:{family:"'Space Grotesk'", size:11}}}},
+              scales:{ x:{ticks:{color:'#4B5B54', font:{family:"'IBM Plex Mono'", size:9}}, grid:{color:'rgba(23,36,32,0.06)'}},
+                       y:{ticks:{color:'#4B5B54', font:{family:"'IBM Plex Mono'", size:9}}, grid:{color:'rgba(23,36,32,0.06)'}, suggestedMin:0} } }
+          });
+        } catch(err) {
+          console.error("wasteChart error:", err);
+          ctx.outerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:220px; color:var(--danger); font-size:12.5px; font-family:'Space Grotesk',sans-serif; text-align:center;">⚠️ Chart error: ${err.message}</div>`;
+        }
+      }
+    }
+
+    // Hostel comparison chart
+    if (hctx) {
+      if(hostelChart) { try { hostelChart.destroy(); } catch(e){} }
+      try {
+        const hLabels = HOSTELS.map(h=>h.name);
+        const hData = HOSTELS.map(h=>{
+          const hl = state.wasteLog.filter(w=>w.hostelId===h.id);
+          if(!hl.length) return 0;
+          return +((hl.reduce((s,w)=>s+(w.prepared-w.consumed)/w.prepared*100,0))/hl.length).toFixed(1);
+        });
+
+        hostelChart = new Chart(hctx, {
+          type:'bar',
+          data:{ labels:hLabels, datasets:[{ label:'Avg waste %', data:hData, backgroundColor:['#3FA796','#D98C3D','#C1543C'] }] },
+          options:{ responsive:true, plugins:{legend:{display:false}},
+            scales:{ x:{ticks:{color:'#4B5B54', font:{family:"'Space Grotesk'", size:9}}, grid:{display:false}},
+                     y:{ticks:{color:'#4B5B54', font:{family:"'IBM Plex Mono'", size:9}}, grid:{color:'rgba(23,36,32,0.06)'}, suggestedMin:0} } }
+        });
+      } catch(err) {
+        console.error("hostelChart error:", err);
+        hctx.outerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:220px; color:var(--danger); font-size:12.5px; font-family:'Space Grotesk',sans-serif; text-align:center;">⚠️ Chart error: ${err.message}</div>`;
+      }
+    }
+  }
+}
+
+/* ============================================================
+   BOOT / INITIALISATION
+   ============================================================ */
+function paintBillingChart() {
+  const canvas = document.getElementById('billingChart');
+  if (!canvas) return;
+
+  if (billingChart) {
+    try { billingChart.destroy(); } catch(e){}
+  }
+
+  const categorySums = {};
+  state.invoices.forEach(inv => {
+    const supp = state.suppliers.find(s => s.name === inv.supplier);
+    const cat = supp ? supp.category : 'Others';
+    categorySums[cat] = (categorySums[cat] || 0) + inv.amount;
+  });
+
+  const labels = Object.keys(categorySums);
+  const data = Object.values(categorySums);
+
+  if (labels.length === 0) {
+    canvas.outerHTML = `<div id="billingChart" style="display:flex; align-items:center; justify-content:center; height:240px; color:var(--ink-soft); font-size:12.5px; font-family:'Space Grotesk',sans-serif; text-align:center;">📊 No billing data recorded yet.</div>`;
+    return;
+  }
+
+  if (typeof Chart === 'undefined') {
+    canvas.outerHTML = `<div id="billingChart" style="display:flex; align-items:center; justify-content:center; height:240px; color:var(--ink-soft); font-size:12.5px; font-family:'Space Grotesk',sans-serif; text-align:center; padding:15px; border:1px dashed var(--rule); border-radius:8px;">📊 Chart.js failed to load. The system is operating offline.</div>`;
+  } else {
+    try {
+      const colors = {
+        'Grains & Pulses': '#3FA796',
+        'Dairy & Eggs': '#D98C3D',
+        'Vegetables & Fruits': '#2C7C6E',
+        'Non-Veg Supplies': '#C1543C',
+        'Commercial LPG': '#7C8B84',
+        'Others': '#4B5B54'
+      };
+      const backgroundColors = labels.map(l => colors[l] || '#4B5B54');
+
+      billingChart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: backgroundColors,
+            borderWidth: 2,
+            borderColor: '#F6F1E4'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                color: '#172420',
+                font: { family: "'Space Grotesk'", size: 12, weight: '600' }
+              }
+            }
+          },
+          cutout: '60%'
+        }
+      });
+    } catch(err) {
+      console.error("billingChart error:", err);
+      canvas.outerHTML = `<div id="billingChart" style="display:flex; align-items:center; justify-content:center; height:240px; color:var(--danger); font-size:12.5px; font-family:'Space Grotesk',sans-serif; text-align:center;">⚠️ Chart error: ${err.message}</div>`;
+    }
+  }
+}
+
+function renderBilling() {
+  const el = document.getElementById('view-billing');
+  if (!el) return;
+
+  const activeSuppliers = state.suppliers.length;
+  const totalInvoiced = state.invoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const outstandingInvoices = state.invoices.filter(inv => inv.status !== 'Paid');
+  const outstandingCount = outstandingInvoices.length;
+  const outstandingAmount = outstandingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const uniqueMonths = [...new Set(state.invoices.map(inv => inv.month))];
+  const avgMonthlySpend = uniqueMonths.length ? Math.round(totalInvoiced / uniqueMonths.length) : 0;
+
+  el.innerHTML = `
+    <div class="row-between">
+      <div>
+        <span class="eyebrow">Finance &amp; Operations</span>
+        <h2 class="section-title" style="margin-bottom:0;">Procurement &amp; Billing</h2>
+      </div>
+    </div>
+    <p class="section-sub">Track monthly invoices, food supply chain distributors, and cost breakdown across dairy, grains, produce, non-veg, and fuel categories.</p>
+
+    <div class="grid2" style="margin-top:24px; margin-bottom:24px;">
+      <div class="card" style="display:flex; flex-direction:column; justify-content:center;">
+        <h3 style="font-family:'Fraunces',serif; margin:0 0 16px; font-size:16px;">Procurement Cost Share</h3>
+        <div style="height:240px; display:flex; justify-content:center; align-items:center; position:relative;">
+          <canvas id="billingChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="font-family:'Fraunces',serif; margin:0 0 14px; font-size:16px;">Supply Chain Summary</h3>
+        <div style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--rule); padding-bottom:8px;">
+            <span style="font-size:13.5px; font-weight:600; color:var(--ink-soft);">Total Active Suppliers</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:700; color:var(--mint-deep);">${activeSuppliers} partners</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--rule); padding-bottom:8px;">
+            <span style="font-size:13.5px; font-weight:600; color:var(--ink-soft);">Total Invoiced (This Qtr)</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:700; color:var(--ink);">₹${totalInvoiced.toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--rule); padding-bottom:8px;">
+            <span style="font-size:13.5px; font-weight:600; color:var(--ink-soft);">Payment Outstanding</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:700; color:var(--danger);">₹${outstandingAmount.toLocaleString('en-IN')} (${outstandingCount} invoice${outstandingCount===1?'':'s'})</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding-bottom:4px;">
+            <span style="font-size:13.5px; font-weight:600; color:var(--ink-soft);">Avg Monthly Spend</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:700; color:var(--amber-deep);">₹${avgMonthlySpend.toLocaleString('en-IN')} / mo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:16px;">
+      <div class="card">
+        <div class="row-between" style="margin-bottom:14px; align-items:center;">
+          <h3 style="font-family:'Fraunces',serif; margin:0; font-size:16px;">Suppliers &amp; Distributors</h3>
+          <button class="btn on xs" onclick="openAddSupplier()" style="padding:4px 8px; font-size:11px; margin:0;">➕ Add Supplier</button>
+        </div>
+        <div class="scroll-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Partner</th>
+                <th>Category</th>
+                <th>Contact Representative</th>
+                <th>Delivery Frequency</th>
+                <th style="width:50px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.suppliers.map((s, idx) => `
+                <tr>
+                  <td style="font-weight:600; color:var(--ink);">${s.name}</td>
+                  <td><span class="tag" style="background:var(--mint-pale); color:var(--mint-deep);">${s.category}</span></td>
+                  <td style="font-size:11.5px;">${s.contact}</td>
+                  <td style="font-size:11.5px; color:var(--ink-soft);">${s.delivery}</td>
+                  <td style="text-align:right;"><button class="btn ghost xs" onclick="openEditSupplier(${idx})" style="padding:2px 6px; font-size:10.5px; margin:0;">✏️ Edit</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row-between" style="margin-bottom:14px; align-items:center;">
+          <h3 style="font-family:'Fraunces',serif; margin:0; font-size:16px;">Invoice log</h3>
+          <button class="btn on xs" onclick="openAddInvoice()" style="padding:4px 8px; font-size:11px; margin:0;">➕ Record Invoice</button>
+        </div>
+        <div class="scroll-table">
+          <table>
+            <thead>
+              <tr>
+                <th>ID &amp; Month</th>
+                <th>Supplier</th>
+                <th>Items Billed</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th style="width:50px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.invoices.map((inv, idx) => `
+                <tr>
+                  <td>
+                    <div style="font-weight:600; color:var(--ink);">${inv.month}</div>
+                    <div style="font-size:10px; color:var(--ink-faint);">${inv.id}</div>
+                  </td>
+                  <td style="font-size:12px; color:var(--ink-soft);">${inv.supplier}</td>
+                  <td style="font-size:11.5px;">${inv.items}</td>
+                  <td style="font-weight:600;">₹${inv.amount.toLocaleString('en-IN')}</td>
+                  <td>
+                    <span class="tag ${inv.status==='Paid'?'done':'warn'}">${inv.status}</span>
+                  </td>
+                  <td style="text-align:right;"><button class="btn ghost xs" onclick="openEditInvoice(${idx})" style="padding:2px 6px; font-size:10.5px; margin:0;">✏️ Edit</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  paintBillingChart();
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+init();
+</script>
+</body>
+</html>
