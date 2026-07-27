@@ -5,6 +5,7 @@ SustainAI operates on a dual-storage replication engine:
 
 Offline Mode: Operates out-of-the-box, persisting the entire application state in the browser's localStorage.
 Cloud Mode: Dynamically connects to Google Firebase Firestore via the built-in Console interface in the header. Once connected, RSVPs, mess menus, context variables, and audit trails synchronize instantly in real-time across multiple devices (e.g. students on phones, canteens on tablets).
+-------------------------------------------------------------------------------------------------------------------
 👤 Role 1: Student App (Meal RSVP)
 Designed to gather active attendance data before preparation begins.
 
@@ -17,6 +18,7 @@ If a meal has non-vegetarian options available, it displays a red badge (🍗 No
 Interactive RSVP Controls:
 Buttons to confirm attendance as either Attend Veg, Attend Non-Veg, or mark Can't make it.
 Immediate status alert updates (e.g., ✓ Attend (Veg) saved in green, ✓ Not Attending saved in grey) to confirm their choice is recorded.
+---------------------------------------------------------------------------------------------------------------------
 🍳 Role 2: Kitchen Staff Dashboard (Mess Operations)
 Empowers cooks to prepare food to the ticket rather than static averages, and edit the mess menu.
 
@@ -30,6 +32,7 @@ A modal allows editing the dish name and checking/unchecking the non-vegetarian 
 Saving updates the database instantly, automatically changing the menu names and showing/hiding dietary cards for students in real-time.
 Simulate IoT Scale Reading:
 Integrates with raw scales to measure prep quantities and plates returned. Click Simulate IoT reading to pull weights, then click Log service to feed data directly to the Admin's analytics.
+----------------------------------------------------------------------------------------------------------------------
 👑 Role 3: Hostel Admin (Analytics & Procurement)
 Restricted dashboard for supervisors to audit, examine waste trend charts, and manage vendor billing.
 
