@@ -54,7 +54,7 @@ Follow this chronological flow to demonstrate all features on screen in under 2 
 Mermaid diagram
 Step 1: Sign in with Admin Credentials
 Select the Hostel Admin card on the login screen.
-Enter username adminuser and password 12345 to log in successfully.
+Enter username adminuser and password to log in successfully.
 Step 2: Admin & Analytics Tour
 Review the stats card numbers showing cost savings.
 Scroll to show the line and bar charts rendering waste metrics.
